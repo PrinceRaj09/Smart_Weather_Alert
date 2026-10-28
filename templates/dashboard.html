@@ -1,0 +1,1172 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgriWeather | Farmer Dashboard</title>
+
+<style>
+:root {
+    --green: #176b45;
+    --dark: #103c2c;
+    --light: #edf7ef;
+    --bg: #f5f8f5;
+    --text: #20352a;
+    --muted: #718176;
+    --border: #e0e9e1;
+    --white: #ffffff;
+    --shadow: 0 8px 25px rgba(24, 70, 43, 0.06);
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
+
+button, a { font: inherit; }
+button { cursor: pointer; }
+
+.layout {
+    display: grid;
+    grid-template-columns: 235px minmax(0, 1fr);
+    min-height: 100vh;
+}
+
+.sidebar {
+    background: var(--dark);
+    color: white;
+    padding: 25px 17px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 8px;
+}
+
+.logo {
+    width: 43px;
+    height: 43px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+    background: #218653;
+    font-size: 24px;
+}
+
+.brand strong { font-size: 16px; }
+.brand small {
+    display: block;
+    color: #b5d3c0;
+    margin-top: 4px;
+    font-size: 11px;
+}
+
+.nav-label {
+    color: #9fc5ae;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    margin: 0 12px 12px;
+}
+
+.nav {
+    display: grid;
+    gap: 8px;
+}
+
+.nav a {
+    color: #d1e6d8;
+    text-decoration: none;
+    padding: 13px;
+    border-radius: 11px;
+    font-size: 13px;
+}
+
+.nav a:hover, .nav a.active {
+    background: #176b45;
+    color: white;
+}
+
+.sidebar-note {
+    margin-top: auto;
+    padding: 15px;
+    border: 1px solid #32634b;
+    border-radius: 13px;
+    color: #d1e6d8;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.main {
+    min-width: 0;
+    padding: 27px clamp(15px, 3vw, 38px);
+}
+
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 24px;
+}
+
+.eyebrow {
+    color: var(--muted);
+    font-size: 11px;
+    margin-bottom: 7px;
+}
+
+h1 {
+    margin: 0;
+    font-size: 26px;
+    letter-spacing: -0.5px;
+}
+
+.user-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 30px;
+    padding: 8px 13px;
+}
+
+.avatar {
+    position: relative;
+    overflow: hidden;
+    background: #dcefe1;
+    color: var(--green);
+    width: 37px;
+    height: 37px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    font-weight: bold;
+}
+
+.avatar img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-picture-editor {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    padding: 14px;
+    border-radius: 12px;
+    background: #f7faf7;
+}
+
+.profile-picture-editor img {
+    width: 76px;
+    height: 76px;
+    border: 2px solid var(--border);
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.profile-picture-editor input {
+    max-width: 100%;
+}
+
+.profile-picture-status {
+    flex-basis: 100%;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.user-chip small {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 3px;
+}
+
+.hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    min-height: 205px;
+    padding: 28px;
+    border-radius: 20px;
+    color: white;
+    background:
+      linear-gradient(110deg, rgba(9,65,43,.97), rgba(20,117,73,.82)),
+      url("/static/farm-background.png") center/cover;
+    box-shadow: var(--shadow);
+}
+
+.hero-copy { max-width: 600px; }
+
+.pill {
+    display: inline-block;
+    padding: 7px 11px;
+    border: 1px solid #ffffff4a;
+    border-radius: 30px;
+    background: #ffffff18;
+    font-size: 11px;
+}
+
+.hero h2 {
+    margin: 15px 0 9px;
+    font-size: clamp(23px, 3vw, 34px);
+}
+
+.hero p {
+    color: #e0f0e5;
+    line-height: 1.6;
+    font-size: 13px;
+}
+
+.hero-weather {
+    min-width: 135px;
+    text-align: center;
+    padding: 17px;
+    background: #ffffff20;
+    border: 1px solid #ffffff45;
+    border-radius: 17px;
+}
+
+.hero-weather .sun { font-size: 28px; }
+.hero-weather strong {
+    display: block;
+    font-size: 30px;
+    margin: 8px 0;
+}
+.hero-weather small { color: #e0f0e5; }
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin: 18px 0 8px;
+}
+
+.btn {
+    padding: 10px 14px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--green);
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.btn.primary {
+    background: var(--green);
+    color: white;
+    border-color: var(--green);
+}
+
+.btn:disabled {
+    opacity: .65;
+    cursor: not-allowed;
+}
+
+.status {
+    min-height: 28px;
+    padding: 8px 2px;
+    color: var(--muted);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.status.error { color: #b42318; }
+
+.section-title {
+    margin: 23px 0 13px;
+}
+
+.section-title h2, .card h2 {
+    font-size: 17px;
+    margin: 0;
+}
+
+.section-title p, .card-head p {
+    color: var(--muted);
+    font-size: 12px;
+    margin: 5px 0 0;
+}
+
+.metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 13px;
+}
+
+.metric, .card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 17px;
+    box-shadow: var(--shadow);
+}
+
+.metric { padding: 17px; min-width: 0; }
+
+.metric-top, .card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.metric label {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.metric-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    background: var(--light);
+    display: grid;
+    place-items: center;
+    font-size: 18px;
+}
+
+.metric strong {
+    display: block;
+    font-size: 25px;
+    margin: 13px 0 6px;
+    overflow-wrap: anywhere;
+}
+
+.metric small {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.content-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr);
+    gap: 16px;
+    margin-top: 17px;
+}
+
+.card { padding: 20px; min-width: 0; }
+
+.card-head { margin-bottom: 16px; }
+
+.alert-list {
+    display: grid;
+    gap: 10px;
+}
+
+.alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 13px;
+    border-radius: 12px;
+    background: #fff6df;
+    border: 1px solid #f1e5bd;
+}
+
+.alert.normal {
+    background: var(--light);
+    border-color: #d8eadc;
+}
+
+.alert.danger {
+    background: #fff0ed;
+    border-color: #f4d2cc;
+}
+
+.alert-icon {
+    flex: 0 0 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: white;
+    display: grid;
+    place-items: center;
+}
+
+.alert h3 { font-size: 13px; margin: 1px 0 5px; }
+.alert p { font-size: 12px; line-height: 1.5; margin: 0; color: #647267; }
+
+.empty {
+    padding: 14px;
+    background: #f7faf7;
+    color: var(--muted);
+    border-radius: 10px;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.profile-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.profile-item {
+    min-width: 0;
+    padding: 12px;
+    background: #f7faf7;
+    border-radius: 10px;
+}
+
+.profile-item small {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    margin-bottom: 6px;
+}
+
+.profile-item strong {
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.crop-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 12px;
+}
+
+.crop-chip {
+    background: var(--light);
+    color: var(--green);
+    border: 1px solid #d8eadc;
+    padding: 7px 10px;
+    border-radius: 30px;
+    font-size: 11px;
+}
+
+.forecast {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(88px, 1fr));
+    gap: 9px;
+    overflow-x: auto;
+    padding-bottom: 5px;
+}
+
+.forecast-item {
+    text-align: center;
+    background: #f7faf7;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 13px 8px;
+}
+
+.forecast-item small, .forecast-item span {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.forecast-item .weather-icon {
+    font-size: 21px;
+    margin: 10px 0;
+}
+
+.forecast-item strong {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.forecast-item span { display: block; margin-top: 5px; }
+
+.footer {
+    text-align: center;
+    color: #87968b;
+    font-size: 11px;
+    margin-top: 24px;
+}
+
+@media(max-width:1050px) {
+    .layout { grid-template-columns: 200px minmax(0,1fr); }
+    .metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .content-grid { grid-template-columns: 1fr; }
+}
+
+@media(max-width:650px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { padding: 13px; gap: 13px; }
+    .nav-label, .sidebar-note { display: none; }
+    .nav { display: flex; overflow-x: auto; }
+    .nav a { white-space: nowrap; padding: 10px; }
+    .main { padding: 18px 12px; }
+    h1 { font-size: 21px; }
+    .hero { padding: 20px; align-items: flex-start; }
+    .hero-weather { min-width: 100px; padding: 12px 7px; }
+    .hero-weather strong { font-size: 23px; }
+    .metrics { gap: 9px; }
+    .metric { padding: 12px; }
+    .metric strong { font-size: 21px; }
+    .card { padding: 15px; }
+}
+</style>
+</head>
+
+<body>
+<div class="layout">
+
+<aside class="sidebar">
+    <div class="brand">
+        <div class="logo">🌱</div>
+        <div>
+            <strong>AgriWeather</strong>
+            <small>Smart farming assistant</small>
+        </div>
+    </div>
+
+    <div>
+        <div class="nav-label">WORKSPACE</div>
+        <nav class="nav">
+            <a class="active" href="#overview">⌂ Overview</a>
+            <a href="#weather-section">☀ Weather</a>
+            <a href="#alerts-section">⚑ Alerts</a>
+            <a href="#farm-section">♧ Farm profile</a>
+        </nav>
+    </div>
+
+    <div class="sidebar-note">
+        🌿 <strong>Farm smart, grow strong</strong><br>
+        Check local conditions before planning irrigation, spraying or field work.
+    </div>
+</aside>
+
+<main class="main">
+
+<header class="topbar">
+    <div>
+        <div class="eyebrow">FARMER WORKSPACE</div>
+        <h1>Welcome, <span id="welcome-name">Farmer</span>!</h1>
+    </div>
+
+    <div class="user-chip">
+        <div class="avatar" id="avatar">F</div>
+        <div>
+            <strong id="farmer-name">Farmer</strong>
+            <small id="farmer-id">Your farm at a glance</small>
+        </div>
+    </div>
+</header>
+
+<section class="hero" id="overview">
+    <div class="hero-copy">
+        <span class="pill">● LIVE WEATHER MONITOR</span>
+        <h2>Good farming starts with good forecasts.</h2>
+        <p id="hero-location">
+            Weather and crop alerts for your registered farm.
+        </p>
+        <span class="pill" id="updated-at">Not updated yet</span>
+    </div>
+
+    <div class="hero-weather">
+        <div class="sun">🌤️</div>
+        <strong id="hero-temp">—°C</strong>
+        <small id="hero-condition">Waiting for weather</small>
+    </div>
+</section>
+
+<div class="toolbar">
+    <button class="btn primary" id="refresh-btn">↻ Refresh weather</button>
+    <button class="btn" id="registered-btn">⌖ Registered farm</button>
+    <button class="btn" id="detect-btn">◎ Use current GPS</button>
+    <button class="btn" id="notifications-btn" type="button">Enable weather notifications</button>
+    <a class="btn" href="/logout">Log out</a>
+</div>
+
+<div id="weather-status" class="status" role="status">
+    Loading your farm profile and weather…
+</div>
+
+<section id="weather-section">
+    <div class="section-title">
+        <h2>Current conditions</h2>
+        <p>Latest readings for the selected location</p>
+    </div>
+
+    <div class="metrics">
+        <article class="metric">
+            <div class="metric-top">
+                <label>Temperature</label><span class="metric-icon">🌡️</span>
+            </div>
+            <strong id="temp">— °C</strong>
+            <small>Air temperature</small>
+        </article>
+
+        <article class="metric">
+            <div class="metric-top">
+                <label>Humidity</label><span class="metric-icon">💧</span>
+            </div>
+            <strong id="humidity">—%</strong>
+            <small>Relative humidity</small>
+        </article>
+
+        <article class="metric">
+            <div class="metric-top">
+                <label>Rainfall</label><span class="metric-icon">🌧️</span>
+            </div>
+            <strong id="rain">— mm</strong>
+            <small>Current precipitation</small>
+        </article>
+
+        <article class="metric">
+            <div class="metric-top">
+                <label>Wind speed</label><span class="metric-icon">🍃</span>
+            </div>
+            <strong id="wind">— km/h</strong>
+            <small>Near-surface wind</small>
+        </article>
+    </div>
+</section>
+
+<div class="content-grid">
+
+<section class="card" id="alerts-section">
+    <div class="card-head">
+        <div>
+            <h2>Weather alerts</h2>
+            <p>Conditions that may need your attention</p>
+        </div>
+        <button class="btn" id="alerts-refresh">Refresh</button>
+    </div>
+    <div id="alerts-list" class="alert-list">
+        <div class="empty">Loading alerts…</div>
+    </div>
+</section>
+
+<section class="card" id="farm-section">
+    <div class="card-head">
+        <div>
+            <h2>My farm profile</h2>
+            <p>Information saved during registration</p>
+        </div>
+        <span>🌾</span>
+    </div>
+
+    <div class="profile-picture-editor">
+        <img id="profile-picture-preview" alt="Your profile picture" hidden>
+        <div>
+            <label for="profile-picture-input">Profile picture</label>
+            <input id="profile-picture-input" type="file"
+                   accept="image/jpeg,image/png,image/webp">
+            <button class="btn primary" id="save-profile-picture"
+                    type="button">Change picture</button>
+        </div>
+        <span class="profile-picture-status" id="profile-picture-status"
+              role="status" aria-live="polite">
+            JPG, PNG, or WEBP; maximum 5 MB.
+        </span>
+    </div>
+
+    <div class="profile-grid">
+        <div class="profile-item"><small>Village</small><strong id="village">Loading…</strong></div>
+        <div class="profile-item"><small>District</small><strong id="district">Loading…</strong></div>
+        <div class="profile-item"><small>State</small><strong id="state">Loading…</strong></div>
+        <div class="profile-item"><small>PIN code</small><strong id="pin">Loading…</strong></div>
+        <div class="profile-item"><small>Farming type</small><strong id="farm-type">Loading…</strong></div>
+        <div class="profile-item"><small>Farm size</small><strong id="farm-size">Loading…</strong></div>
+        <div class="profile-item" style="grid-column:1/-1">
+            <small>Saved GPS coordinates</small><strong id="coords">Loading…</strong>
+        </div>
+    </div>
+
+    <div class="section-title"><h2 style="font-size:14px">Registered crops</h2></div>
+    <div id="crop-list" class="crop-list">
+        <span class="empty">Loading crops…</span>
+    </div>
+</section>
+</div>
+
+<section class="card" style="margin-top:17px">
+    <div class="card-head">
+        <div>
+            <h2>Hourly forecast</h2>
+            <p>Upcoming hours returned by the weather service</p>
+        </div>
+        <span>◷</span>
+    </div>
+    <div id="forecast-list" class="forecast">
+        <div class="empty">Hourly forecast will appear here.</div>
+    </div>
+</section>
+
+<p class="footer">
+    AgriWeather · Weather information supports planning and is not an official emergency warning.
+</p>
+
+</main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+let registeredCoords = null;
+let activeCoords = null;
+let latestWeatherAlerts = [];
+const notifiedAlertIds = new Set();
+const WEATHER_REFRESH_INTERVAL = 5 * 60 * 1000;
+
+function safeText(value, fallback = "Not provided") {
+    return value === null || value === undefined || value === ""
+        ? fallback
+        : String(value);
+}
+
+function setStatus(message, error = false) {
+    $("weather-status").textContent = message;
+    $("weather-status").classList.toggle("error", error);
+}
+
+async function getJSON(url) {
+    const response = await fetch(url, { credentials: "same-origin" });
+
+    let data;
+    try {
+        data = await response.json();
+    } catch {
+        throw new Error(
+            `Server returned a non-JSON response (${response.status}). Check the Flask route.`
+        );
+    }
+
+    if (!response.ok || data.success === false) {
+        throw new Error(data.message || `Request failed (${response.status}).`);
+    }
+
+    return data;
+}
+
+async function loadProfile() {
+    const data = await getJSON("/api/profile");
+    const p = data.profile || data;
+
+    const name = safeText(p.full_name, "Farmer");
+    $("welcome-name").textContent = name;
+    $("farmer-name").textContent = name;
+    $("avatar").textContent = name.trim().charAt(0).toUpperCase() || "F";
+    $("farmer-id").textContent = safeText(p.user_id, "Registered farmer");
+    if (p.profile_picture) {
+        $("profile-picture-preview").src = p.profile_picture;
+        $("profile-picture-preview").hidden = false;
+        const profileImage = document.createElement("img");
+        profileImage.src = p.profile_picture;
+        profileImage.alt = "";
+        $("avatar").replaceChildren(profileImage);
+    }
+
+    $("village").textContent = safeText(p.village);
+    $("district").textContent = safeText(p.district);
+    $("state").textContent = safeText(p.state);
+    $("pin").textContent = safeText(p.pin_code);
+    $("farm-type").textContent = safeText(p.farming_type);
+    $("farm-size").textContent = safeText(p.farm_size);
+
+    $("hero-location").textContent =
+        [p.village, p.district, p.state].filter(Boolean).join(", ")
+        || "Registered farm location";
+
+    const lat = Number(p.latitude);
+    const lon = Number(p.longitude);
+
+    if (p.latitude !== null && p.latitude !== "" &&
+        p.longitude !== null && p.longitude !== "" &&
+        Number.isFinite(lat) && Number.isFinite(lon)) {
+        registeredCoords = { lat, lon };
+        $("coords").textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+    } else {
+        registeredCoords = null;
+        $("coords").textContent = "Location not saved";
+    }
+
+    const crops = String(p.crops || "")
+        .split(/[,;]+/)
+        .map(crop => crop.trim())
+        .filter(Boolean);
+
+    $("crop-list").replaceChildren();
+
+    if (!crops.length) {
+        $("crop-list").innerHTML =
+            '<span class="empty">No crops recorded in your profile.</span>';
+    } else {
+        crops.forEach(crop => {
+            const chip = document.createElement("span");
+            chip.className = "crop-chip";
+            chip.textContent = "🌱 " + crop;
+            $("crop-list").appendChild(chip);
+        });
+    }
+}
+
+const profilePictureInput = $("profile-picture-input");
+const profilePictureStatus = $("profile-picture-status");
+let profilePicturePreviewUrl = null;
+
+profilePictureInput.addEventListener("change", () => {
+    const file = profilePictureInput.files[0];
+    if (!file) return;
+
+    if (profilePicturePreviewUrl) {
+        URL.revokeObjectURL(profilePicturePreviewUrl);
+    }
+    profilePicturePreviewUrl = URL.createObjectURL(file);
+    $("profile-picture-preview").src = profilePicturePreviewUrl;
+    $("profile-picture-preview").hidden = false;
+    profilePictureStatus.textContent = file.name;
+});
+
+$("save-profile-picture").addEventListener("click", async () => {
+    const file = profilePictureInput.files[0];
+    if (!file) {
+        profilePictureStatus.textContent = "Choose a picture first.";
+        return;
+    }
+
+    const button = $("save-profile-picture");
+    button.disabled = true;
+    profilePictureStatus.textContent = "Saving profile picture…";
+
+    try {
+        const formData = new FormData();
+        formData.append("profile_picture", file);
+        const response = await fetch("/api/profile/picture", {
+            method: "POST",
+            credentials: "same-origin",
+            body: formData
+        });
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || "Could not update picture.");
+        }
+
+        $("profile-picture-preview").src = result.profile_picture;
+        $("profile-picture-preview").hidden = false;
+        const profileImage = document.createElement("img");
+        profileImage.src = result.profile_picture;
+        profileImage.alt = "";
+        $("avatar").replaceChildren(profileImage);
+        profilePictureStatus.textContent = result.message;
+        profilePictureInput.value = "";
+    } catch (error) {
+        profilePictureStatus.textContent = error.message;
+    } finally {
+        button.disabled = false;
+    }
+});
+
+function renderAlerts(alerts) {
+    const box = $("alerts-list");
+    box.replaceChildren();
+
+    if (!Array.isArray(alerts) || alerts.length === 0) {
+        box.innerHTML = `
+            <div class="alert normal">
+                <div class="alert-icon">✓</div>
+                <div>
+                    <h3>No active alerts reported</h3>
+                    <p>Continue monitoring local conditions.</p>
+                </div>
+            </div>`;
+        return;
+    }
+
+    alerts.forEach(alert => {
+        const level = String(alert.level || "").toLowerCase();
+
+        const item = document.createElement("article");
+        item.className = "alert " +
+            (level === "danger" ? "danger" :
+             level === "normal" ? "normal" : "");
+
+        const icon = document.createElement("div");
+        icon.className = "alert-icon";
+        icon.textContent = level === "danger" ? "⚠️" : "🔔";
+
+        const content = document.createElement("div");
+        const title = document.createElement("h3");
+        title.textContent =
+            [alert.level, alert.title].filter(Boolean).join(": ")
+            || "Weather alert";
+
+        const message = document.createElement("p");
+        message.textContent =
+            alert.message || "Review weather conditions before field work.";
+
+        content.append(title, message);
+        item.append(icon, content);
+        box.appendChild(item);
+    });
+}
+
+function notifyWeatherAlerts(alerts) {
+    latestWeatherAlerts = alerts.filter(alert =>
+        ["warning", "danger"].includes(
+            String(alert.level || "").toLowerCase()
+        )
+    );
+
+    if (!("Notification" in window) ||
+        Notification.permission !== "granted") {
+        return;
+    }
+
+    latestWeatherAlerts.forEach(alert => {
+        const id = [
+            alert.type || "current",
+            alert.time || "",
+            alert.title || "",
+            alert.message || ""
+        ].join(":");
+
+        if (notifiedAlertIds.has(id)) {
+            return;
+        }
+
+        notifiedAlertIds.add(id);
+        new Notification(alert.title || "Weather alert", {
+            body: alert.message || "Review weather conditions for your farm.",
+            tag: id
+        });
+    });
+}
+
+function renderForecast(weather) {
+    const box = $("forecast-list");
+    box.replaceChildren();
+
+    const forecast = weather.forecast;
+
+    if (!forecast || !Array.isArray(forecast.time) ||
+        forecast.time.length === 0) {
+        box.innerHTML =
+            '<div class="empty">No hourly forecast data was returned by the API.</div>';
+        return;
+    }
+
+    const count = Math.min(6, forecast.time.length);
+
+    for (let i = 0; i < count; i++) {
+        const item = document.createElement("div");
+        item.className = "forecast-item";
+
+        const date = new Date(forecast.time[i]);
+        const time = document.createElement("small");
+        time.textContent = Number.isNaN(date.getTime())
+            ? String(forecast.time[i]).slice(-5)
+            : date.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit"
+            });
+
+        const icon = document.createElement("div");
+        icon.className = "weather-icon";
+        const rain = forecast.precipitation?.[i];
+        icon.textContent = Number(rain) > 0 ? "🌧️" : "🌤️";
+
+        const temp = document.createElement("strong");
+        const temperature = forecast.temperature_2m?.[i];
+        temp.textContent = temperature === undefined
+            ? "—"
+            : `${temperature}°C`;
+
+        const rainText = document.createElement("span");
+        rainText.textContent = `Rain: ${rain ?? "—"} mm`;
+
+        const windText = document.createElement("span");
+        windText.textContent =
+            `Wind: ${forecast.wind_speed_10m?.[i] ?? "—"} km/h`;
+
+        item.append(time, icon, temp, rainText, windText);
+        box.appendChild(item);
+    }
+}
+
+async function loadWeather(coords = null) {
+    setStatus("Fetching weather and alerts…");
+
+    try {
+        let data;
+
+        if (coords) {
+            const query =
+                `latitude=${encodeURIComponent(coords.lat)}` +
+                `&longitude=${encodeURIComponent(coords.lon)}`;
+
+            data = await getJSON(`/weather?${query}`);
+        } else {
+            data = await getJSON("/api/my-weather");
+        }
+
+        const weather = data.weather || data;
+        activeCoords = coords || registeredCoords;
+
+        $("temp").textContent = `${weather.temperature_2m ?? "—"} °C`;
+        $("humidity").textContent =
+            `${weather.relative_humidity_2m ?? "—"}%`;
+        $("rain").textContent = `${weather.precipitation ?? "—"} mm`;
+        $("wind").textContent = `${weather.wind_speed_10m ?? "—"} km/h`;
+
+        $("hero-temp").textContent =
+            `${weather.temperature_2m ?? "—"}°C`;
+
+        $("hero-condition").textContent =
+            Number(weather.precipitation) > 0
+            ? "Precipitation reported"
+            : "Current conditions";
+
+        $("updated-at").textContent =
+            "Updated " + new Date().toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit"
+            });
+
+        const alerts = [
+            ...(Array.isArray(weather.alerts) ? weather.alerts : []),
+            ...(Array.isArray(weather.forecast_alerts)
+                ? weather.forecast_alerts
+                : [])
+        ];
+        renderAlerts(alerts);
+        notifyWeatherAlerts(alerts);
+        renderForecast(weather);
+
+        setStatus(
+            "Weather loaded for " +
+            (coords ? "the current GPS location." : "your registered farm.")
+        );
+
+    } catch (error) {
+        setStatus(error.message, true);
+
+        $("alerts-list").innerHTML = `
+            <div class="alert danger">
+                <div class="alert-icon">!</div>
+                <div>
+                    <h3>Weather could not be loaded</h3>
+                    <p></p>
+                </div>
+            </div>`;
+
+        $("alerts-list").querySelector("p").textContent = error.message;
+    }
+}
+
+function getCurrentGPS() {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error("Your browser does not support GPS location."));
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            position => resolve({
+                lat: position.coords.latitude,
+                lon: position.coords.longitude
+            }),
+            () => reject(new Error("Current GPS location is unavailable.")),
+            { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+        );
+    });
+}
+
+$("refresh-btn").addEventListener("click", () => loadWeather(activeCoords));
+$("alerts-refresh").addEventListener("click", () => loadWeather(activeCoords));
+$("registered-btn").addEventListener("click", () => loadWeather(null));
+
+const notificationsButton = $("notifications-btn");
+
+function updateNotificationsButton() {
+    if (!("Notification" in window)) {
+        notificationsButton.textContent = "Browser notifications unavailable";
+        notificationsButton.disabled = true;
+    } else if (Notification.permission === "granted") {
+        notificationsButton.textContent = "Weather notifications enabled";
+    } else if (Notification.permission === "denied") {
+        notificationsButton.textContent = "Notifications blocked in browser";
+    }
+}
+
+notificationsButton.addEventListener("click", async () => {
+    if (!("Notification" in window)) {
+        setStatus("This browser does not support notifications.", true);
+        return;
+    }
+
+    if (Notification.permission === "denied") {
+        setStatus(
+            "Notifications are blocked. Allow them in your browser's site settings.",
+            true
+        );
+        return;
+    }
+
+    const permission = Notification.permission === "granted"
+        ? "granted"
+        : await Notification.requestPermission();
+
+    updateNotificationsButton();
+
+    if (permission === "granted") {
+        setStatus("Weather notifications enabled for this browser.");
+        notifyWeatherAlerts(latestWeatherAlerts);
+    } else {
+        setStatus("Notification permission was not granted.", true);
+    }
+});
+
+updateNotificationsButton();
+
+async function loadCurrentGPS() {
+    setStatus("Requesting GPS permission…");
+
+    try {
+        await loadWeather(await getCurrentGPS());
+    } catch (error) {
+        setStatus(
+            `${error.message} Using registered farm location instead.`
+        );
+        await loadWeather(null);
+    }
+}
+
+$("detect-btn").addEventListener("click", loadCurrentGPS);
+
+document.querySelectorAll(".nav a").forEach(link => {
+    link.addEventListener("click", () => {
+        document.querySelectorAll(".nav a").forEach(item =>
+            item.classList.remove("active")
+        );
+        link.classList.add("active");
+    });
+});
+
+(async function initDashboard() {
+    try {
+        await loadProfile();
+    } catch (error) {
+        setStatus(error.message, true);
+        return;
+    }
+
+    await loadCurrentGPS();
+    window.setInterval(() => loadWeather(activeCoords), WEATHER_REFRESH_INTERVAL);
+})();
+</script>
+</body>
+</html>

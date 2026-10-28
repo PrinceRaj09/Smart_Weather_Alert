@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Registered Farmers</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            font-family: Arial, sans-serif;
+            background: #f3f7f1;
+            color: #26352b;
+        }
+
+        .container {
+            max-width: 1500px;
+            margin: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .header h1 {
+            color: #216b3b;
+            margin: 0;
+        }
+
+        .count {
+            margin: 18px 0;
+            font-size: 17px;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        input {
+            padding: 11px;
+            width: 300px;
+            max-width: 100%;
+            border: 1px solid #bdc9bd;
+            border-radius: 6px;
+        }
+
+        button, .logout {
+            padding: 11px 16px;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            background: #267544;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .logout {
+            background: #a63232;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px #00000010;
+        }
+
+        table {
+            width: 100%;
+            min-width: 1400px;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #e4e9e4;
+            text-align: left;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        th {
+            background: #216b3b;
+            color: white;
+        }
+
+        tr:hover td {
+            background: #f4faf4;
+        }
+
+        .empty {
+            padding: 24px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1>Registered Farmers</h1>
+        <a class="logout" href="{{ url_for('logout') }}">Logout</a>
+    </div>
+
+    <p class="count">
+        Total registered farmers: <strong>{{ total_farmers }}</strong>
+        | Search results: <strong>{{ farmers|length }}</strong>
+    </p>
+
+    <form class="search-form" method="GET"
+          action="{{ url_for('admin_farmers') }}">
+
+        <input
+            type="search"
+            name="search"
+            placeholder="Search name, mobile, email or Farmer ID"
+            value="{{ search }}"
+        >
+
+        <button type="submit">Search</button>
+
+        <a class="logout"
+           href="{{ url_for('admin_farmers') }}"
+           style="background:#59665c;">
+            Clear
+        </a>
+    </form>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Farmer ID</th>
+                    <th>Full Name</th>
+                    <th>Mobile</th>
+                    <th>Email</th>
+                    <th>State</th>
+                    <th>District</th>
+                    <th>Village</th>
+                    <th>PIN Code</th>
+                    <th>Farming Type</th>
+                    <th>Farm Size</th>
+                    <th>Crops</th>
+                    <th>Latitude</th>
+                    <th>Longitude</th>
+                    <th>Registration Date</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for farmer in farmers %}
+                <tr>
+                    <td>{{ farmer.user_id or '-' }}</td>
+                    <td>{{ farmer.full_name or '-' }}</td>
+                    <td>{{ farmer.phone or '-' }}</td>
+                    <td>{{ farmer.email or '-' }}</td>
+                    <td>{{ farmer.state or '-' }}</td>
+                    <td>{{ farmer.district or '-' }}</td>
+                    <td>{{ farmer.village or '-' }}</td>
+                    <td>{{ farmer.pin_code or '-' }}</td>
+                    <td>{{ farmer.farming_type or '-' }}</td>
+                    <td>{{ farmer.farm_size if farmer.farm_size is not none else '-' }}</td>
+                    <td>{{ farmer.crops or '-' }}</td>
+                    <td>{{ farmer.latitude if farmer.latitude is not none else '-' }}</td>
+                    <td>{{ farmer.longitude if farmer.longitude is not none else '-' }}</td>
+                    <td>{{ farmer.created_at or '-' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="14" class="empty">
+                        No registered farmers found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+</body>
+</html>

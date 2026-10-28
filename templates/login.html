@@ -1,0 +1,395 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farmer Login</title>
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background:
+                linear-gradient(#0005, #0005),
+                url("/static/farm-background.png") center/cover no-repeat;
+        }
+
+        .login-box {
+            background: white;
+            width: 100%;
+            max-width: 430px;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 25px #0003;
+        }
+
+        h2 { text-align: center; color: #246b36; }
+        .subtitle { text-align: center; color: #666; }
+
+        .login-tabs {
+            display: flex;
+            gap: 7px;
+            margin: 22px 0;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 11px 5px;
+            border: 1px solid #287a3e;
+            background: white;
+            color: #287a3e;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .tab.active {
+            background: #287a3e;
+            color: white;
+        }
+
+        label {
+            display: block;
+            margin: 16px 0 7px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 13px;
+            margin-top: 23px;
+            border: 0;
+            border-radius: 8px;
+            color: white;
+            background: #287a3e;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .error {
+            background: #fee4e2;
+            color: #b42318;
+            padding: 10px;
+            border-radius: 7px;
+        }
+
+        .register-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .forgot-link {
+            display: block;
+            margin-top: 14px;
+            text-align: right;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .reset-panel {
+            margin-top: 20px;
+            padding: 18px;
+            border: 1px solid #d5e5d8;
+            border-radius: 10px;
+            background: #f7fbf7;
+        }
+
+        .reset-panel h3 { margin-top: 0; color: #246b36; }
+        .reset-panel button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            border: 0;
+            border-radius: 8px;
+            color: white;
+            background: #287a3e;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        .reset-message {
+            overflow-wrap: anywhere;
+            line-height: 1.5;
+        }
+
+        .reset-message.error { background: #fee4e2; color: #b42318; }
+        .reset-message.success { background: #e7f5eb; color: #246b36; }
+
+        a { color: #287a3e; }
+    </style>
+</head>
+
+<body>
+    <div class="login-box">
+        <h2>🌾 Farmer Login</h2>
+        <p class="subtitle">Smart Agriculture Weather Alert</p>
+
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <div class="login-tabs">
+            <button type="button" class="tab active"
+                onclick="selectLogin('mobile', this)">
+                Mobile
+            </button>
+
+            <button type="button" class="tab"
+                onclick="selectLogin('email', this)">
+                Email
+            </button>
+
+            <button type="button" class="tab"
+                onclick="selectLogin('user_id', this)">
+                User ID
+            </button>
+        </div>
+
+        <form method="POST" action="{{ url_for('login') }}">
+            <label id="identifierLabel" for="identifier">
+                Mobile Number
+            </label>
+
+            <input
+                type="text"
+                id="identifier"
+                name="identifier"
+                placeholder="Enter registered mobile number"
+                autocomplete="username"
+                required
+            >
+
+            <label for="password">Password</label>
+            <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Enter your password"
+                autocomplete="current-password"
+                required
+            >
+
+            <button class="submit-btn" type="submit">Login</button>
+        </form>
+
+        <a class="forgot-link" id="forgotPasswordLink" href="#forgot-password">
+            Forgot password?
+        </a>
+
+        <section class="reset-panel" id="resetPanel" hidden>
+            <h3>Reset your password</h3>
+            <p>
+                We’ll send separate verification codes to the mobile number
+                and email registered to your account.
+            </p>
+
+            <form id="requestResetForm">
+                <label for="resetIdentifier">Registered mobile, email, or Farmer ID</label>
+                <input id="resetIdentifier" name="identifier" required>
+                <button type="submit" id="sendCodesButton">Send verification codes</button>
+            </form>
+
+            <form id="verifyResetForm" hidden>
+                <label for="smsOtp">Code sent to your registered mobile</label>
+                <input id="smsOtp" name="sms_otp" inputmode="numeric"
+                       autocomplete="one-time-code" pattern="[0-9]{6}"
+                       maxlength="6" required>
+
+                <label for="emailOtp">Code sent to your registered email</label>
+                <input id="emailOtp" name="email_otp" inputmode="numeric"
+                       pattern="[0-9]{6}" maxlength="6" required>
+
+                <button type="submit" id="verifyCodesButton">Verify codes</button>
+            </form>
+
+            <form id="createPasswordForm" hidden>
+                <h3>Create new password</h3>
+                <label for="newPassword">New password (at least 8 characters)</label>
+                <input id="newPassword" name="password" type="password"
+                       minlength="8" autocomplete="new-password" required>
+
+                <label for="confirmNewPassword">Confirm new password</label>
+                <input id="confirmNewPassword" name="confirm_password"
+                       type="password" minlength="8"
+                       autocomplete="new-password" required>
+
+                <button type="submit" id="resetPasswordButton">Create new password</button>
+            </form>
+            <p id="resetMessage" class="reset-message" role="status"
+               aria-live="polite"></p>
+        </section>
+
+        <div class="register-link">
+            New farmer?
+            <a href="{{ url_for('register') }}">Register here</a>
+        </div>
+    </div>
+
+    <script>
+        function selectLogin(type, button) {
+            document.querySelectorAll(".tab").forEach(tab => {
+                tab.classList.remove("active");
+            });
+
+            button.classList.add("active");
+
+            const input = document.getElementById("identifier");
+            const label = document.getElementById("identifierLabel");
+
+            if (type === "mobile") {
+                label.textContent = "Mobile Number";
+                input.placeholder = "Enter registered mobile number";
+                input.type = "tel";
+                input.inputMode = "numeric";
+            } else if (type === "email") {
+                label.textContent = "Email Address";
+                input.placeholder = "Enter registered email";
+                input.type = "email";
+                input.inputMode = "email";
+            } else {
+                label.textContent = "Farmer User ID";
+                input.placeholder = "Example: FARM00001";
+                input.type = "text";
+                input.inputMode = "text";
+            }
+
+            input.value = "";
+            input.focus();
+        }
+
+        const resetPanel = document.getElementById("resetPanel");
+        const requestResetForm = document.getElementById("requestResetForm");
+        const verifyResetForm = document.getElementById("verifyResetForm");
+        const createPasswordForm = document.getElementById("createPasswordForm");
+        const resetMessage = document.getElementById("resetMessage");
+
+        document.getElementById("forgotPasswordLink").addEventListener(
+            "click",
+            event => {
+                event.preventDefault();
+                resetPanel.hidden = !resetPanel.hidden;
+                document.getElementById("resetIdentifier").value =
+                    document.getElementById("identifier").value.trim();
+            }
+        );
+
+        function showResetMessage(message, isError = false) {
+            resetMessage.textContent = message;
+            resetMessage.className =
+                "reset-message " + (isError ? "error" : "success");
+        }
+
+        requestResetForm.addEventListener("submit", async event => {
+            event.preventDefault();
+            const button = document.getElementById("sendCodesButton");
+            button.disabled = true;
+            showResetMessage("Sending verification codes…");
+
+            try {
+                const response = await fetch("/forgot-password/request", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        identifier: document.getElementById(
+                            "resetIdentifier"
+                        ).value.trim()
+                    })
+                });
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || "Could not send codes.");
+                }
+
+                verifyResetForm.hidden = false;
+                showResetMessage(result.message);
+            } catch (error) {
+                showResetMessage(error.message, true);
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        verifyResetForm.addEventListener("submit", async event => {
+            event.preventDefault();
+            const button = document.getElementById("verifyCodesButton");
+            button.disabled = true;
+            showResetMessage("Verifying codes…");
+
+            try {
+                const response = await fetch("/forgot-password/verify", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(Object.fromEntries(
+                        new FormData(verifyResetForm).entries()
+                    ))
+                });
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(
+                        result.message || "Could not verify the codes."
+                    );
+                }
+
+                verifyResetForm.hidden = true;
+                createPasswordForm.hidden = false;
+                showResetMessage(result.message);
+            } catch (error) {
+                showResetMessage(error.message, true);
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        createPasswordForm.addEventListener("submit", async event => {
+            event.preventDefault();
+            const button = document.getElementById("resetPasswordButton");
+            button.disabled = true;
+            showResetMessage("Creating your new password…");
+
+            try {
+                const response = await fetch("/forgot-password/complete", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(Object.fromEntries(
+                        new FormData(createPasswordForm).entries()
+                    ))
+                });
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(
+                        result.message || "Could not create the new password."
+                    );
+                }
+
+                requestResetForm.hidden = true;
+                createPasswordForm.hidden = true;
+                showResetMessage(result.message);
+            } catch (error) {
+                showResetMessage(error.message, true);
+            } finally {
+                button.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
