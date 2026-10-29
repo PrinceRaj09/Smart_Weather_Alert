@@ -701,7 +701,8 @@ def admin_farmers():
                     crops,
                     latitude,
                     longitude,
-                    created_at
+                    created_at,
+                    profile_picture
                 FROM users
                 WHERE full_name LIKE ?
                    OR phone LIKE ?
@@ -726,7 +727,8 @@ def admin_farmers():
                     crops,
                     latitude,
                     longitude,
-                    created_at
+                    created_at,
+                    profile_picture
                 FROM users
                 ORDER BY id DESC
             """).fetchall()
@@ -855,11 +857,16 @@ def profile_picture(filename):
 
     with get_connection() as conn:
         picture = conn.execute(
-            "SELECT 1 FROM users WHERE user_id = ? AND profile_picture = ?",
-            (user_id, filename)
+            "SELECT user_id FROM users WHERE profile_picture = ?",
+            (filename,)
         ).fetchone()
 
-    if not picture:
+    is_owner = picture and picture["user_id"] == user_id
+    is_admin = (
+        ADMIN_USER_ID
+        and user_id.strip().upper() == ADMIN_USER_ID
+    )
+    if not picture or not (is_owner or is_admin):
         return jsonify({
             "success": False,
             "message": "Profile picture not found."

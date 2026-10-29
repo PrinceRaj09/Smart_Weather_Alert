@@ -100,6 +100,13 @@
             background: #f4faf4;
         }
 
+        .profile-picture {
+            width: 56px;
+            height: 56px;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
         .empty {
             padding: 24px;
             text-align: center;
@@ -157,6 +164,7 @@
                     <th>Latitude</th>
                     <th>Longitude</th>
                     <th>Registration Date</th>
+                    <th>Profile Picture</th>
                 </tr>
             </thead>
 
@@ -177,10 +185,21 @@
                     <td>{{ farmer.latitude if farmer.latitude is not none else '-' }}</td>
                     <td>{{ farmer.longitude if farmer.longitude is not none else '-' }}</td>
                     <td>{{ farmer.created_at or '-' }}</td>
+                    <td>
+                        {% if farmer.profile_picture %}
+                        <img
+                            class="profile-picture"
+                            src="{{ url_for('profile_picture', filename=farmer.profile_picture) }}"
+                            alt="Profile picture of {{ farmer.full_name }}"
+                        >
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="14" class="empty">
+                    <td colspan="15" class="empty">
                         No registered farmers found.
                     </td>
                 </tr>
