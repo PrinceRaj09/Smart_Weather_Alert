@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: smart-weather-alert
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    healthCheckPath: /
+    envVars:
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_PATH
+        value: /var/data/weather_alert.db
+      - key: PROFILE_PICTURE_DIR
+        value: /var/data/profile_pictures
+    disk:
+      name: smart-weather-alert-data
+      mountPath: /var/data
+      sizeGB: 1

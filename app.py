@@ -69,8 +69,9 @@ PASSWORD_RESET_MESSAGE = (
 PASSWORD_RESET_TTL_SECONDS = 10 * 60
 PASSWORD_RESET_RESEND_SECONDS = 60
 PASSWORD_RESET_MAX_ATTEMPTS = 5
-PROFILE_PICTURE_FOLDER = os.path.join(
-    app.instance_path, "profile_pictures"
+PROFILE_PICTURE_FOLDER = os.environ.get(
+    "PROFILE_PICTURE_DIR",
+    os.path.join(app.instance_path, "profile_pictures")
 )
 PROFILE_PICTURE_MAX_PIXELS = 20_000_000
 

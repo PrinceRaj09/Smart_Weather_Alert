@@ -1,8 +1,9 @@
 
+import os
 import sqlite3
 from werkzeug.security import generate_password_hash
 
-DATABASE_NAME = "weather_alert.db"
+DATABASE_NAME = os.environ.get("DATABASE_PATH", "weather_alert.db")
 
 
 def get_connection():
