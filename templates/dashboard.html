@@ -139,6 +139,112 @@ h1 {
     border: 1px solid var(--border);
     border-radius: 30px;
     padding: 8px 13px;
+    color: var(--text);
+    text-align: left;
+}
+
+.account-menu {
+    position: relative;
+}
+
+.account-menu-trigger:hover,
+.account-menu-trigger[aria-expanded="true"] {
+    border-color: #b7d4c0;
+    box-shadow: 0 4px 14px rgba(24, 70, 43, 0.1);
+}
+
+.account-menu-caret {
+    color: var(--muted);
+    font-size: 12px;
+    margin-left: 2px;
+}
+
+.account-menu-panel {
+    position: absolute;
+    z-index: 5;
+    top: calc(100% + 10px);
+    right: 0;
+    width: min(340px, calc(100vw - 28px));
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: white;
+    box-shadow: 0 14px 36px rgba(24, 70, 43, 0.16);
+}
+
+.account-menu-panel[hidden] {
+    display: none;
+}
+
+.account-menu-panel h2 {
+    margin: 0 0 4px;
+    font-size: 16px;
+}
+
+.account-menu-panel > p {
+    margin: 0 0 14px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.account-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.account-info-item {
+    min-width: 0;
+    padding: 9px;
+    border-radius: 9px;
+    background: #f7faf7;
+}
+
+.account-info-item small,
+.account-info-item strong {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
+.account-info-item small {
+    margin-bottom: 4px;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.account-info-item strong {
+    font-size: 12px;
+}
+
+.account-picture-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding-top: 13px;
+    border-top: 1px solid var(--border);
+}
+
+.account-picture-controls input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+}
+
+.account-picture-controls input:focus-visible + label {
+    outline: 2px solid var(--green);
+    outline-offset: 2px;
+}
+
+.account-picture-status {
+    flex-basis: 100%;
+    min-height: 16px;
+    color: var(--muted);
+    font-size: 11px;
 }
 
 .avatar {
@@ -160,35 +266,6 @@ h1 {
     width: 100%;
     height: 100%;
     object-fit: cover;
-}
-
-.profile-picture-editor {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
-    padding: 14px;
-    border-radius: 12px;
-    background: #f7faf7;
-}
-
-.profile-picture-editor img {
-    width: 76px;
-    height: 76px;
-    border: 2px solid var(--border);
-    border-radius: 50%;
-    object-fit: cover;
-}
-
-.profile-picture-editor input {
-    max-width: 100%;
-}
-
-.profile-picture-status {
-    flex-basis: 100%;
-    color: var(--muted);
-    font-size: 12px;
 }
 
 .user-chip small {
@@ -555,12 +632,46 @@ h1 {
         <h1>Welcome, <span id="welcome-name">Farmer</span>!</h1>
     </div>
 
-    <div class="user-chip">
-        <div class="avatar" id="avatar">F</div>
-        <div>
-            <strong id="farmer-name">Farmer</strong>
-            <small id="farmer-id">Your farm at a glance</small>
-        </div>
+    <div class="account-menu">
+        <button class="user-chip account-menu-trigger" id="account-menu-trigger"
+                type="button" aria-expanded="false"
+                aria-controls="account-menu-panel" aria-label="Open farmer account information">
+            <span class="avatar" id="avatar">F</span>
+            <span>
+                <strong id="farmer-name">Farmer</strong>
+                <small id="farmer-id">Your farm at a glance</small>
+            </span>
+            <span class="account-menu-caret" aria-hidden="true">▾</span>
+        </button>
+        <section class="account-menu-panel" id="account-menu-panel"
+                 aria-labelledby="account-menu-title" hidden>
+            <h2 id="account-menu-title">Farmer information</h2>
+            <p>Your account and registered farm details</p>
+            <div class="account-info">
+                <div class="account-info-item"><small>Full name</small><strong id="account-name">Loading…</strong></div>
+                <div class="account-info-item"><small>Farmer ID</small><strong id="account-id">Loading…</strong></div>
+                <div class="account-info-item"><small>Mobile</small><strong id="account-phone">Loading…</strong></div>
+                <div class="account-info-item"><small>Email</small><strong id="account-email">Loading…</strong></div>
+                <div class="account-info-item"><small>Village</small><strong id="account-village">Loading…</strong></div>
+                <div class="account-info-item"><small>District / State</small><strong id="account-location">Loading…</strong></div>
+                <div class="account-info-item"><small>PIN code</small><strong id="account-pin">Loading…</strong></div>
+                <div class="account-info-item"><small>Farming type</small><strong id="account-farm-type">Loading…</strong></div>
+                <div class="account-info-item"><small>Farm size</small><strong id="account-farm-size">Loading…</strong></div>
+                <div class="account-info-item"><small>Main crops</small><strong id="account-crops">Loading…</strong></div>
+            </div>
+            <div class="account-picture-controls">
+                <input id="profile-picture-input" type="file"
+                       accept="image/jpeg,image/png,image/webp"
+                       aria-label="Choose a profile picture">
+                <label class="btn" for="profile-picture-input">Choose photo</label>
+                <button class="btn primary" id="save-profile-picture"
+                        type="button">Upload photo</button>
+                <span class="account-picture-status" id="profile-picture-status"
+                      role="status" aria-live="polite">
+                    JPG, PNG, or WEBP; maximum 5 MB.
+                </span>
+            </div>
+        </section>
     </div>
 </header>
 
@@ -658,21 +769,6 @@ h1 {
         <span>🌾</span>
     </div>
 
-    <div class="profile-picture-editor">
-        <img id="profile-picture-preview" alt="Your profile picture" hidden>
-        <div>
-            <label for="profile-picture-input">Profile picture</label>
-            <input id="profile-picture-input" type="file"
-                   accept="image/jpeg,image/png,image/webp">
-            <button class="btn primary" id="save-profile-picture"
-                    type="button">Change picture</button>
-        </div>
-        <span class="profile-picture-status" id="profile-picture-status"
-              role="status" aria-live="polite">
-            JPG, PNG, or WEBP; maximum 5 MB.
-        </span>
-    </div>
-
     <div class="profile-grid">
         <div class="profile-item"><small>Village</small><strong id="village">Loading…</strong></div>
         <div class="profile-item"><small>District</small><strong id="district">Loading…</strong></div>
@@ -760,9 +856,18 @@ async function loadProfile() {
     $("farmer-name").textContent = name;
     $("avatar").textContent = name.trim().charAt(0).toUpperCase() || "F";
     $("farmer-id").textContent = safeText(p.user_id, "Registered farmer");
+    $("account-name").textContent = name;
+    $("account-id").textContent = safeText(p.user_id);
+    $("account-phone").textContent = safeText(p.phone);
+    $("account-email").textContent = safeText(p.email);
+    $("account-village").textContent = safeText(p.village);
+    $("account-location").textContent =
+        [p.district, p.state].filter(Boolean).join(", ") || "Not provided";
+    $("account-pin").textContent = safeText(p.pin_code);
+    $("account-farm-type").textContent = safeText(p.farming_type);
+    $("account-farm-size").textContent = safeText(p.farm_size);
+    $("account-crops").textContent = safeText(p.crops);
     if (p.profile_picture) {
-        $("profile-picture-preview").src = p.profile_picture;
-        $("profile-picture-preview").hidden = false;
         const profileImage = document.createElement("img");
         profileImage.src = p.profile_picture;
         profileImage.alt = "";
@@ -815,19 +920,37 @@ async function loadProfile() {
 
 const profilePictureInput = $("profile-picture-input");
 const profilePictureStatus = $("profile-picture-status");
-let profilePicturePreviewUrl = null;
+const accountMenuTrigger = $("account-menu-trigger");
+const accountMenuPanel = $("account-menu-panel");
+
+accountMenuTrigger.addEventListener("click", () => {
+    const isExpanded = accountMenuTrigger.getAttribute("aria-expanded") === "true";
+    accountMenuTrigger.setAttribute("aria-expanded", String(!isExpanded));
+    accountMenuPanel.hidden = isExpanded;
+});
+
+document.addEventListener("click", event => {
+    if (
+        event.target instanceof Element &&
+        !event.target.closest(".account-menu")
+    ) {
+        accountMenuPanel.hidden = true;
+        accountMenuTrigger.setAttribute("aria-expanded", "false");
+    }
+});
+
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && !accountMenuPanel.hidden) {
+        accountMenuPanel.hidden = true;
+        accountMenuTrigger.setAttribute("aria-expanded", "false");
+        accountMenuTrigger.focus();
+    }
+});
 
 profilePictureInput.addEventListener("change", () => {
-    const file = profilePictureInput.files[0];
-    if (!file) return;
-
-    if (profilePicturePreviewUrl) {
-        URL.revokeObjectURL(profilePicturePreviewUrl);
-    }
-    profilePicturePreviewUrl = URL.createObjectURL(file);
-    $("profile-picture-preview").src = profilePicturePreviewUrl;
-    $("profile-picture-preview").hidden = false;
-    profilePictureStatus.textContent = file.name;
+    profilePictureStatus.textContent = profilePictureInput.files[0]
+        ? profilePictureInput.files[0].name
+        : "JPG, PNG, or WEBP; maximum 5 MB.";
 });
 
 $("save-profile-picture").addEventListener("click", async () => {
@@ -855,8 +978,6 @@ $("save-profile-picture").addEventListener("click", async () => {
             throw new Error(result.message || "Could not update picture.");
         }
 
-        $("profile-picture-preview").src = result.profile_picture;
-        $("profile-picture-preview").hidden = false;
         const profileImage = document.createElement("img");
         profileImage.src = result.profile_picture;
         profileImage.alt = "";
@@ -864,7 +985,8 @@ $("save-profile-picture").addEventListener("click", async () => {
         profilePictureStatus.textContent = result.message;
         profilePictureInput.value = "";
     } catch (error) {
-        profilePictureStatus.textContent = error.message;
+        profilePictureStatus.textContent =
+            error.message || "Could not update picture.";
     } finally {
         button.disabled = false;
     }

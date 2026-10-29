@@ -127,16 +127,6 @@
             border-radius: 10px;
         }
 
-        .picture-preview {
-            display: block;
-            width: 96px;
-            height: 96px;
-            margin-top: 12px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid var(--line);
-        }
-
         .gps-button {
             padding: 10px 14px;
             border: 1px solid var(--green);
@@ -238,7 +228,6 @@
         <h2>🌿 Farmer Registration</h2>
         <p class="description">
             Complete the required fields to create your farmer account.
-            A profile picture is optional.
         </p>
 
         <form id="registerForm">
@@ -278,15 +267,6 @@
                     <input id="confirm_password" name="confirm_password"
                            type="password" minlength="8"
                            autocomplete="new-password" required>
-                </div>
-
-                <div class="field full">
-                    <label for="profile_picture">Profile Picture (optional)</label>
-                    <input id="profile_picture" name="profile_picture"
-                           type="file" accept="image/jpeg,image/png,image/webp">
-                    <small>JPG, PNG, or WEBP; maximum 5 MB.</small>
-                    <img id="picturePreview" class="picture-preview"
-                         alt="Selected profile picture preview" hidden>
                 </div>
 
                 <h3 class="section-title">Full Address</h3>
@@ -382,33 +362,7 @@
     const submitButton = document.getElementById("submitButton");
     const gpsStatus = document.getElementById("gpsStatus");
     const userIdResult = document.getElementById("userIdResult");
-    const picturePreview = document.getElementById("picturePreview");
-    let picturePreviewUrl = null;
-
     let gpsDetected = false;
-
-    document.getElementById("profile_picture").addEventListener(
-        "change",
-        event => {
-            const file = event.target.files[0];
-            if (!file) {
-                picturePreview.hidden = true;
-                picturePreview.removeAttribute("src");
-                if (picturePreviewUrl) {
-                    URL.revokeObjectURL(picturePreviewUrl);
-                    picturePreviewUrl = null;
-                }
-                return;
-            }
-
-            if (picturePreviewUrl) {
-                URL.revokeObjectURL(picturePreviewUrl);
-            }
-            picturePreviewUrl = URL.createObjectURL(file);
-            picturePreview.src = picturePreviewUrl;
-            picturePreview.hidden = false;
-        }
-    );
 
     document.getElementById("detectLocation").addEventListener("click", () => {
         if (!navigator.geolocation) {
@@ -517,12 +471,6 @@
             userIdResult.querySelector(".user-id").textContent = result.user_id;
 
             form.reset();
-            picturePreview.hidden = true;
-            picturePreview.removeAttribute("src");
-            if (picturePreviewUrl) {
-                URL.revokeObjectURL(picturePreviewUrl);
-                picturePreviewUrl = null;
-            }
             gpsDetected = false;
             gpsStatus.textContent = "GPS location is required.";
 

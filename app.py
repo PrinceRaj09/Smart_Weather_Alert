@@ -221,17 +221,16 @@ def register():
         return render_template("register.html")
 
     data = request.get_json(silent=True)
-    profile_picture_upload = None
 
     if data is None and request.mimetype == "multipart/form-data":
         data = request.form.to_dict()
-        profile_picture_upload = request.files.get("profile_picture")
 
     if not isinstance(data, dict):
         return jsonify({
             "success": False,
             "message": "Invalid registration request."
         }), 400
+    data.pop("profile_picture", None)
 
     full_name = data.get("full_name", "")
     phone = data.get("phone", "")
@@ -281,32 +280,10 @@ def register():
             "message": "Please detect a valid GPS location first."
         }), 400
 
-    picture_data, picture_error = _process_profile_picture(
-        profile_picture_upload
-    )
-    if picture_error:
-        return jsonify({
-            "success": False,
-            "message": picture_error
-        }), 400
-
-    saved_picture = None
-    if picture_data is not None:
-        try:
-            saved_picture = _save_profile_picture(picture_data)
-        except OSError:
-            app.logger.exception("Could not save registration profile picture.")
-            return jsonify({
-                "success": False,
-                "message": "Could not save the profile picture. Please try again."
-            }), 500
-        data["profile_picture"] = saved_picture
-
     # Save the registration details using database.py.
     success, message, user_id = register_user(data)
 
     if not success:
-        _delete_profile_picture(saved_picture)
         return jsonify({
             "success": False,
             "message": message
