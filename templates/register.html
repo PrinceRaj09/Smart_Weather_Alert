@@ -27,6 +27,169 @@
                 url("/static/farm-background.png") center/cover fixed no-repeat;
         }
 
+        .welcome-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 10;
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+            padding: 24px;
+            color: white;
+            text-align: center;
+            background:
+                linear-gradient(135deg, #062c32dc, #0b4934c9 55%, #176b43b8),
+                url("/static/farm-background.png") center/cover no-repeat;
+            animation: welcome-appear 700ms ease-out both;
+            transition: opacity 450ms ease, visibility 450ms ease;
+        }
+
+        .welcome-screen::before,
+        .welcome-screen::after {
+            position: absolute;
+            width: min(72vw, 560px);
+            aspect-ratio: 1;
+            border: 1px solid #ffffff20;
+            border-radius: 50%;
+            content: "";
+            animation: orbit 18s linear infinite;
+        }
+
+        .welcome-screen::after {
+            width: min(92vw, 760px);
+            border-style: dashed;
+            animation-direction: reverse;
+            animation-duration: 30s;
+        }
+
+        .welcome-content {
+            position: relative;
+            z-index: 1;
+            width: min(100%, 560px);
+            animation: welcome-rise 900ms cubic-bezier(.2, .75, .25, 1) both;
+        }
+
+        .welcome-mark {
+            display: grid;
+            width: 82px;
+            height: 82px;
+            margin: 0 auto 24px;
+            place-items: center;
+            border: 1px solid #ffffff80;
+            border-radius: 26px;
+            background: #ffffff20;
+            box-shadow: 0 12px 40px #001c1c55, inset 0 0 24px #ffffff18;
+            font-size: 42px;
+            animation: mark-float 2.4s ease-in-out infinite;
+        }
+
+        .welcome-title {
+            margin: 0;
+            font-size: clamp(36px, 8vw, 66px);
+            font-weight: 900;
+            letter-spacing: -1.5px;
+            line-height: 1.08;
+            text-shadow: 0 4px 24px #001c1c80;
+        }
+
+        .welcome-title span {
+            display: block;
+            color: #b7f2c8;
+        }
+
+        .welcome-tagline {
+            margin: 18px 0 34px;
+            color: #f0fff4;
+            font-size: clamp(15px, 3vw, 18px);
+            font-weight: 700;
+            letter-spacing: .3px;
+        }
+
+        .weather-loader {
+            position: relative;
+            display: grid;
+            width: 70px;
+            height: 70px;
+            margin: 0 auto 15px;
+            place-items: center;
+        }
+
+        .weather-loader::before,
+        .weather-loader::after {
+            position: absolute;
+            inset: 0;
+            border: 3px solid transparent;
+            border-top-color: #b7f2c8;
+            border-right-color: #b7f2c866;
+            border-radius: 50%;
+            content: "";
+            animation: orbit 1s linear infinite;
+        }
+
+        .weather-loader::after {
+            inset: 8px;
+            border-top-color: #ffffff;
+            border-right-color: transparent;
+            animation-direction: reverse;
+            animation-duration: 700ms;
+        }
+
+        .loader-icon {
+            font-size: 23px;
+            animation: weather-pulse 900ms ease-in-out infinite alternate;
+        }
+
+        .loading-label {
+            margin: 0;
+            color: #e6fff0;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .welcome-screen.is-leaving {
+            visibility: hidden;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .registration-page {
+            opacity: 0;
+            transform: translateY(18px) scale(.99);
+        }
+
+        .registration-page.is-visible {
+            animation: page-open 700ms cubic-bezier(.2, .75, .25, 1) both;
+        }
+
+        @keyframes welcome-appear {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes welcome-rise {
+            from { opacity: 0; transform: translateY(24px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes page-open {
+            from { opacity: 0; transform: translateY(18px) scale(.99); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes orbit {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes mark-float {
+            50% { transform: translateY(-7px) rotate(-3deg); }
+        }
+
+        @keyframes weather-pulse {
+            to { transform: scale(1.2); }
+        }
+
         .page {
             max-width: 1250px;
             margin: auto;
@@ -202,11 +365,42 @@
             .grid { grid-template-columns: 1fr; }
             .section-title, .full { grid-column: 1; }
         }
+
+        @media (prefers-reduced-motion: reduce) {
+            .welcome-screen,
+            .welcome-content,
+            .welcome-screen::before,
+            .welcome-screen::after,
+            .welcome-mark,
+            .weather-loader::before,
+            .weather-loader::after,
+            .loader-icon,
+            .registration-page.is-visible {
+                animation-duration: 1ms;
+                animation-iteration-count: 1;
+                transition-duration: 1ms;
+            }
+        }
     </style>
 </head>
 
 <body>
-<main class="page">
+<section class="welcome-screen" id="welcomeScreen"
+         aria-label="Welcome to AgriWeather" role="status">
+    <div class="welcome-content">
+        <div class="welcome-mark" aria-hidden="true">🌱</div>
+        <h1 class="welcome-title">Welcome to <span>AgriWeather</span></h1>
+        <p class="welcome-tagline">
+            Smarter forecasts. Stronger harvests.
+        </p>
+        <div class="weather-loader" aria-hidden="true">
+            <span class="loader-icon">🌦️</span>
+        </div>
+        <p class="loading-label">Preparing your farm dashboard</p>
+    </div>
+</section>
+
+<main class="page registration-page" id="registrationPage">
 
     <section class="intro">
         <div class="brand">🌱 Smart Agriculture<br>Weather Alert</div>
@@ -357,6 +551,15 @@
 </main>
 
 <script>
+    const welcomeScreen = document.getElementById("welcomeScreen");
+    const registrationPage = document.getElementById("registrationPage");
+
+    window.setTimeout(() => {
+        welcomeScreen.classList.add("is-leaving");
+        registrationPage.classList.add("is-visible");
+        welcomeScreen.setAttribute("aria-hidden", "true");
+    }, 4000);
+
     const form = document.getElementById("registerForm");
     const message = document.getElementById("message");
     const submitButton = document.getElementById("submitButton");
