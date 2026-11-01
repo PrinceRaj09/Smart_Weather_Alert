@@ -13,6 +13,10 @@ services:
         value: /var/data/weather_alert.db
       - key: PROFILE_PICTURE_DIR
         value: /var/data/profile_pictures
+      - key: VERCEL_ORIGIN
+        sync: false
+      - key: ADMIN_USER_ID
+        sync: false
     disk:
       name: smart-weather-alert-data
       mountPath: /var/data

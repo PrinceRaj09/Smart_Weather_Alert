@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#123f30">
+    <meta name="description" content="Farm weather, alerts, crop guidance and farmer profiles.">
+    <title>AgriWeather · Smart Weather Alert</title>
+    <link rel="icon" type="image/svg+xml" href="./agriweather-icon.svg">
+    <link rel="stylesheet" href="./styles.css">
+    <script src="./config.js"></script>
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <div class="ambient ambient-one" aria-hidden="true"></div>
+    <div class="ambient ambient-two" aria-hidden="true"></div>
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="AgriWeather home">
+        <span class="brand-icon" aria-hidden="true">🌱</span>
+        <span>AgriWeather<small>SMART WEATHER ALERT</small></span>
+      </a>
+      <div id="top-actions"></div>
+    </header>
+    <main id="app" class="page" aria-live="polite">
+      <div class="loading-card">Loading your farm dashboard…</div>
+    </main>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <footer>Built for confident farming · Weather data by Open-Meteo</footer>
+  </body>
+</html>

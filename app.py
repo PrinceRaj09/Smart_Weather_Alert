@@ -10,9 +10,11 @@ import time
 import uuid
 import warnings
 from email.message import EmailMessage
+from urllib.parse import urlsplit
 
 import requests
 from dotenv import load_dotenv
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from PIL import Image, UnidentifiedImageError
 from flask import (
     Flask,
@@ -22,7 +24,8 @@ from flask import (
     redirect,
     url_for,
     session,
-    send_from_directory
+    send_from_directory,
+    make_response
 )
 from werkzeug.security import (
     check_password_hash,
@@ -54,8 +57,187 @@ if not app.secret_key:
 
 # Only this user's Farmer ID can access the admin farmers list.
 ADMIN_USER_ID = os.environ.get("ADMIN_USER_ID", "").strip().upper()
+ACCESS_TOKEN_TTL_SECONDS = 45 * 60
+
+
+def _normalize_origin(value, setting_name):
+    value = value.strip().rstrip("/")
+    if not value:
+        return None
+
+    parsed = urlsplit(value)
+    if (
+        parsed.scheme not in {"https", "http"}
+        or not parsed.netloc
+        or parsed.username
+        or parsed.password
+        or parsed.path
+        or parsed.query
+        or parsed.fragment
+        or (parsed.scheme != "https" and parsed.hostname not in {
+            "localhost", "127.0.0.1", "::1"
+        })
+    ):
+        raise RuntimeError(
+            f"{setting_name} must be a single HTTPS origin "
+            "(HTTP is allowed only for localhost)."
+        )
+
+    return f"{parsed.scheme}://{parsed.netloc}"
+
+
+VERCEL_ORIGIN = _normalize_origin(
+    os.environ.get("VERCEL_ORIGIN", ""),
+    "VERCEL_ORIGIN"
+)
 
 init_db()
+
+
+def _access_token_serializer():
+    return URLSafeTimedSerializer(
+        app.secret_key,
+        salt="smart-weather-alert-access-token-v1"
+    )
+
+
+def _issue_access_token(user_id):
+    return _access_token_serializer().dumps({
+        "user_id": user_id,
+        "purpose": "split-frontend"
+    })
+
+
+def _verified_bearer_user_id():
+    authorization = request.headers.get("Authorization", "")
+    if not authorization.startswith("Bearer "):
+        return None
+
+    token = authorization[7:].strip()
+    if not token:
+        return None
+
+    try:
+        claims = _access_token_serializer().loads(
+            token,
+            max_age=ACCESS_TOKEN_TTL_SECONDS
+        )
+    except (BadSignature, SignatureExpired):
+        return None
+
+    if (
+        not isinstance(claims, dict)
+        or claims.get("purpose") != "split-frontend"
+        or not isinstance(claims.get("user_id"), str)
+        or not claims["user_id"]
+    ):
+        return None
+
+    return claims["user_id"]
+
+
+def _api_user_id(require_bearer=False):
+    if request.headers.get("Authorization") is not None:
+        return _verified_bearer_user_id()
+    if require_bearer or (
+        VERCEL_ORIGIN and request.headers.get("Origin") == VERCEL_ORIGIN
+    ):
+        return None
+    return session.get("user_id")
+
+
+def _origin_matches_render_host(origin):
+    forwarded_scheme = request.headers.get("X-Forwarded-Proto", "").split(",")[0]
+    schemes = {request.scheme}
+    if forwarded_scheme in {"http", "https"}:
+        schemes.add(forwarded_scheme)
+    return any(
+        origin == f"{scheme}://{request.host}"
+        for scheme in schemes
+    )
+
+
+@app.before_request
+def restrict_api_origins_and_handle_preflight():
+    if not request.path.startswith("/api/"):
+        return None
+
+    origin = request.headers.get("Origin")
+    if not origin:
+        return None
+
+    is_vercel_origin = bool(VERCEL_ORIGIN and origin == VERCEL_ORIGIN)
+    if not is_vercel_origin and not _origin_matches_render_host(origin):
+        return jsonify({
+            "success": False,
+            "message": "Origin is not allowed."
+        }), 403
+
+    if request.method == "OPTIONS":
+        if not is_vercel_origin:
+            return "", 403
+
+        requested_method = request.headers.get(
+            "Access-Control-Request-Method", ""
+        ).upper()
+        requested_headers = {
+            header.strip().lower()
+            for header in request.headers.get(
+                "Access-Control-Request-Headers", ""
+            ).split(",")
+            if header.strip()
+        }
+        if (
+            requested_method not in {"GET", "POST"}
+            or not requested_headers.issubset({"authorization", "content-type"})
+        ):
+            return "", 403
+        return make_response("", 204)
+
+    if is_vercel_origin and request.path.startswith("/api/"):
+        protected_api_paths = (
+            "/api/profile",
+            "/api/profile/soil",
+            "/api/profile/picture",
+            "/api/my-weather",
+            "/api/admin/"
+        )
+        if (
+            any(
+                request.path == path or request.path.startswith(path + "/")
+                for path in protected_api_paths
+            )
+            and _verified_bearer_user_id() is None
+        ):
+            return jsonify({
+                "success": False,
+                "message": "A valid bearer token is required."
+            }), 401
+
+    return None
+
+
+@app.after_request
+def configure_api_cors(response):
+    if request.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
+
+    origin = request.headers.get("Origin")
+    if request.path.startswith("/api/") and origin:
+        response.vary.add("Origin")
+        if request.method == "OPTIONS":
+            response.vary.add("Access-Control-Request-Method")
+            response.vary.add("Access-Control-Request-Headers")
+        if VERCEL_ORIGIN and origin == VERCEL_ORIGIN:
+            response.headers["Access-Control-Allow-Origin"] = VERCEL_ORIGIN
+            response.headers["Access-Control-Allow-Methods"] = (
+                "GET, POST, OPTIONS"
+            )
+            response.headers["Access-Control-Allow-Headers"] = (
+                "Authorization, Content-Type"
+            )
+            response.headers["Access-Control-Max-Age"] = "600"
+    return response
 
 
 @app.errorhandler(413)
@@ -305,6 +487,73 @@ def register():
     }), 201
 
 
+@app.route("/api/auth/register", methods=["POST"])
+def api_register():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({
+            "success": False,
+            "message": "Invalid registration request."
+        }), 400
+
+    data = dict(data)
+    data.pop("profile_picture", None)
+    full_name = data.get("full_name")
+    phone = data.get("phone")
+    if not isinstance(full_name, str) or not isinstance(phone, str):
+        return jsonify({
+            "success": False,
+            "message": "Invalid name or mobile number."
+        }), 400
+
+    full_name = full_name.strip()
+    phone = phone.strip()
+    if not full_name or len(full_name) > 100:
+        return jsonify({
+            "success": False,
+            "message": "Please enter a valid full name."
+        }), 400
+    if (
+        len(phone) != 10
+        or not phone.isdigit()
+        or phone[0] not in "6789"
+    ):
+        return jsonify({
+            "success": False,
+            "message": "Enter a valid 10-digit Indian mobile number."
+        }), 400
+
+    try:
+        latitude = float(data.get("latitude"))
+        longitude = float(data.get("longitude"))
+        if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+            raise ValueError
+        data["latitude"] = latitude
+        data["longitude"] = longitude
+    except (TypeError, ValueError):
+        return jsonify({
+            "success": False,
+            "message": "Please detect a valid GPS location first."
+        }), 400
+
+    success, message, user_id = register_user(data)
+    if not success:
+        return jsonify({
+            "success": False,
+            "message": message
+        }), 400
+
+    return jsonify({
+        "success": True,
+        "message": message,
+        "user_id": user_id,
+        "full_name": full_name,
+        "access_token": _issue_access_token(user_id),
+        "token_type": "Bearer",
+        "expires_in": ACCESS_TOKEN_TTL_SECONDS
+    }), 201
+
+
 # --------------------------------------------------
 # LOGIN
 # --------------------------------------------------
@@ -348,6 +597,57 @@ def login():
     session["full_name"] = user["full_name"]
 
     return redirect(url_for("dashboard"))
+
+
+@app.route("/api/auth/login", methods=["POST"])
+def api_login():
+    data = request.get_json(silent=True)
+    identifier = (
+        data.get("identifier", "").strip()
+        if isinstance(data, dict) and isinstance(data.get("identifier"), str)
+        else ""
+    )
+    password = (
+        data.get("password", "")
+        if isinstance(data, dict) and isinstance(data.get("password"), str)
+        else ""
+    )
+    if not identifier or not password:
+        return jsonify({
+            "success": False,
+            "message": "Please enter your login ID and password."
+        }), 400
+
+    user = get_user_by_identifier(identifier)
+    password_hash = user.get("password_hash") if user else None
+    if not password_hash or not check_password_hash(password_hash, password):
+        return jsonify({
+            "success": False,
+            "message": "Invalid login ID or password."
+        }), 401
+
+    return jsonify({
+        "success": True,
+        "user_id": user["user_id"],
+        "full_name": user["full_name"],
+        "access_token": _issue_access_token(user["user_id"]),
+        "token_type": "Bearer",
+        "expires_in": ACCESS_TOKEN_TTL_SECONDS
+    })
+
+
+@app.route("/api/auth/logout", methods=["POST"])
+def api_logout():
+    if not _api_user_id(require_bearer=True):
+        return jsonify({
+            "success": False,
+            "message": "A valid bearer token is required."
+        }), 401
+    session.clear()
+    return jsonify({
+        "success": True,
+        "message": "Signed out on this device. The access token expires within 45 minutes."
+    })
 
 
 # --------------------------------------------------
@@ -751,6 +1051,76 @@ def admin_farmers():
     )
 
 
+@app.route("/api/admin/farmers")
+def api_admin_farmers():
+    logged_in_user_id = _api_user_id(require_bearer=True)
+    if not logged_in_user_id:
+        return jsonify({
+            "success": False,
+            "message": "A valid bearer token is required."
+        }), 401
+    if not ADMIN_USER_ID:
+        return jsonify({
+            "success": False,
+            "message": "Admin access is not configured."
+        }), 403
+    if logged_in_user_id.strip().upper() != ADMIN_USER_ID:
+        return jsonify({
+            "success": False,
+            "message": "Access denied. Admin only."
+        }), 403
+
+    search = request.args.get("search", "").strip()[:100]
+    try:
+        page = max(1, int(request.args.get("page", "1")))
+    except ValueError:
+        page = 1
+    page = min(page, 2_147_483_647)
+    page_size = 100
+    offset = (page - 1) * page_size
+
+    with get_connection() as conn:
+        if search:
+            pattern = f"%{search}%"
+            total = conn.execute("""
+                SELECT COUNT(*) FROM users
+                WHERE full_name LIKE ? OR phone LIKE ?
+                   OR email LIKE ? OR user_id LIKE ?
+            """, (pattern, pattern, pattern, pattern)).fetchone()[0]
+            farmers = conn.execute("""
+                SELECT user_id, full_name, phone, email, state, district,
+                       village, pin_code, farming_type, farm_size, crops,
+                       soil_type, latitude, longitude, created_at
+                FROM users
+                WHERE full_name LIKE ? OR phone LIKE ?
+                   OR email LIKE ? OR user_id LIKE ?
+                ORDER BY id DESC
+                LIMIT ? OFFSET ?
+            """, (
+                pattern, pattern, pattern, pattern, page_size, offset
+            )).fetchall()
+        else:
+            total = conn.execute(
+                "SELECT COUNT(*) FROM users"
+            ).fetchone()[0]
+            farmers = conn.execute("""
+                SELECT user_id, full_name, phone, email, state, district,
+                       village, pin_code, farming_type, farm_size, crops,
+                       soil_type, latitude, longitude, created_at
+                FROM users
+                ORDER BY id DESC
+                LIMIT ? OFFSET ?
+            """, (page_size, offset)).fetchall()
+
+    return jsonify({
+        "success": True,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "farmers": [dict(farmer) for farmer in farmers]
+    })
+
+
 # --------------------------------------------------
 # LOGOUT
 # --------------------------------------------------
@@ -816,7 +1186,7 @@ def weather_page():
 @app.route("/api/profile")
 def api_profile():
     # Check whether farmer is logged in
-    user_id = session.get("user_id")
+    user_id = _api_user_id()
 
     if not user_id:
         return jsonify({
@@ -858,6 +1228,10 @@ def api_profile():
         "success": True,
         "profile": {
             **dict(farmer),
+            "is_admin": bool(
+                ADMIN_USER_ID
+                and user_id.strip().upper() == ADMIN_USER_ID
+            ),
             "profile_picture": (
                 url_for(
                     "profile_picture",
@@ -872,7 +1246,7 @@ def api_profile():
 
 @app.route("/api/profile", methods=["POST"])
 def update_profile():
-    user_id = session.get("user_id")
+    user_id = _api_user_id()
     if not user_id:
         return jsonify({
             "success": False,
@@ -1055,7 +1429,7 @@ def update_profile():
 
 @app.route("/api/profile/soil", methods=["POST"])
 def update_soil_type():
-    user_id = session.get("user_id")
+    user_id = _api_user_id()
     if not user_id:
         return jsonify({
             "success": False,
@@ -1099,7 +1473,7 @@ def update_soil_type():
 
 @app.route("/api/profile/picture/<filename>")
 def profile_picture(filename):
-    user_id = session.get("user_id")
+    user_id = _api_user_id()
     if not user_id:
         return jsonify({
             "success": False,
@@ -1134,7 +1508,7 @@ def profile_picture(filename):
 
 @app.route("/api/profile/picture", methods=["POST"])
 def update_profile_picture():
-    user_id = session.get("user_id")
+    user_id = _api_user_id()
     if not user_id:
         return jsonify({
             "success": False,
@@ -1205,7 +1579,7 @@ def update_profile_picture():
 def api_my_weather():
 
     # 1. Check whether the farmer is logged in
-    user_id = session.get("user_id")
+    user_id = _api_user_id()
 
     if not user_id:
         return jsonify({
