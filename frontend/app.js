@@ -505,10 +505,20 @@
           <td>${escapeHtml(farmer.farming_type)}</td><td>${escapeHtml(farmer.farm_size)} acres</td>
           <td>${escapeHtml(farmer.crops)}</td><td>${escapeHtml(farmer.soil_type)}</td>
           <td>${escapeHtml(farmer.created_at)}</td>
+          <td>
+            <strong>${Number(farmer.login_count) || 0}</strong>
+            <small class="login-last-seen">${farmer.last_login_at
+              ? `Last: ${formatLoginTimestamp(farmer.last_login_at)}`
+              : "Never logged in"}</small>
+            <button class="button secondary small login-history-toggle"
+              type="button" data-user-id="${escapeHtml(farmer.user_id)}"
+              ${Number(farmer.login_count) ? "" : "disabled"}>View history</button>
+            <div class="login-history-panel" hidden></div>
+          </td>
         </tr>`).join("");
       results.innerHTML = data.farmers.length
         ? `<div class="table-wrap"><table class="farmers-table">
-             <thead><tr><th>Farmer ID</th><th>Name</th><th>Phone</th><th>Email</th><th>Location</th><th>GPS coordinates</th><th>Farm type</th><th>Size</th><th>Crops</th><th>Soil</th><th>Registered</th></tr></thead>
+             <thead><tr><th>Farmer ID</th><th>Name</th><th>Phone</th><th>Email</th><th>Location</th><th>GPS coordinates</th><th>Farm type</th><th>Size</th><th>Crops</th><th>Soil</th><th>Registered</th><th>Login activity</th></tr></thead>
              <tbody>${rows}</tbody></table></div>
            <div class="admin-pages">
              <button class="button secondary small" id="admin-prev" ${adminPage <= 1 ? "disabled" : ""}>Previous</button>
@@ -524,9 +534,59 @@
         adminPage += 1;
         loadAdminFarmers();
       });
+      results.querySelectorAll(".login-history-toggle").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const panel = button.parentElement.querySelector(".login-history-panel");
+          panel.hidden = !panel.hidden;
+          if (!panel.hidden && panel.dataset.loaded !== "true") {
+            await loadFarmerLoginHistory(button.dataset.userId, 1, panel);
+          }
+        });
+      });
     } catch (error) {
       count.textContent = "";
       results.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
+    }
+  }
+
+  function formatLoginTimestamp(timestamp) {
+    const date = new Date(timestamp);
+    return Number.isNaN(date.getTime())
+      ? escapeHtml(timestamp)
+      : escapeHtml(date.toLocaleString());
+  }
+
+  async function loadFarmerLoginHistory(userId, page, panel) {
+    panel.innerHTML = '<div class="empty-state">Loading login history…</div>';
+    try {
+      const query = new URLSearchParams({ page: String(page) });
+      const data = await api(
+        `/api/admin/farmers/${encodeURIComponent(userId)}/logins?${query}`
+      );
+      const entries = data.logins.map((login) =>
+        `<li>${formatLoginTimestamp(login.logged_in_at)}</li>`
+      ).join("");
+      const totalPages = Math.max(1, Math.ceil(data.total / data.page_size));
+      panel.innerHTML = `
+        <strong>Successful logins · ${data.total}</strong>
+        ${entries ? `<ol>${entries}</ol>` : '<p>No login records yet.</p>'}
+        ${totalPages > 1 ? `
+          <div class="login-history-pages">
+            <button class="button secondary small" data-history-page="${data.page - 1}"
+              ${data.page <= 1 ? "disabled" : ""}>Previous</button>
+            <span>Page ${data.page} of ${totalPages} · local time</span>
+            <button class="button secondary small" data-history-page="${data.page + 1}"
+              ${data.page >= totalPages ? "disabled" : ""}>Next</button>
+          </div>` : '<small>Times shown in your local timezone.</small>'}`;
+      panel.dataset.loaded = "true";
+      panel.querySelectorAll("[data-history-page]").forEach((button) => {
+        button.addEventListener("click", () => {
+          loadFarmerLoginHistory(userId, Number(button.dataset.historyPage), panel);
+        });
+      });
+    } catch (error) {
+      panel.dataset.loaded = "false";
+      panel.innerHTML = `<p class="form-message">${escapeHtml(error.message)}</p>`;
     }
   }
 

@@ -36,6 +36,7 @@ from crop_advisor import SOIL_TYPES, suggest_crops
 from database import (
     init_db,
     register_user,
+    record_user_login,
     get_user_by_identifier,
     get_connection
 )
@@ -591,6 +592,8 @@ def login():
             error="Incorrect password. Please try again."
         )
 
+    record_user_login(user["user_id"])
+
     # Create a fresh session after successful authentication.
     session.clear()
     session["user_id"] = user["user_id"]
@@ -625,6 +628,8 @@ def api_login():
             "success": False,
             "message": "Invalid login ID or password."
         }), 401
+
+    record_user_login(user["user_id"])
 
     return jsonify({
         "success": True,
@@ -1011,7 +1016,11 @@ def admin_farmers():
                     latitude,
                     longitude,
                     created_at,
-                    profile_picture
+                    profile_picture,
+                    (SELECT COUNT(*) FROM user_login_history AS history
+                     WHERE history.user_id = users.user_id) AS login_count,
+                    (SELECT MAX(logged_in_at) FROM user_login_history AS history
+                     WHERE history.user_id = users.user_id) AS last_login_at
                 FROM users
                 WHERE full_name LIKE ?
                    OR phone LIKE ?
@@ -1038,7 +1047,11 @@ def admin_farmers():
                     latitude,
                     longitude,
                     created_at,
-                    profile_picture
+                    profile_picture,
+                    (SELECT COUNT(*) FROM user_login_history AS history
+                     WHERE history.user_id = users.user_id) AS login_count,
+                    (SELECT MAX(logged_in_at) FROM user_login_history AS history
+                     WHERE history.user_id = users.user_id) AS last_login_at
                 FROM users
                 ORDER BY id DESC
             """).fetchall()
@@ -1090,7 +1103,11 @@ def api_admin_farmers():
             farmers = conn.execute("""
                 SELECT user_id, full_name, phone, email, state, district,
                        village, pin_code, farming_type, farm_size, crops,
-                       soil_type, latitude, longitude, created_at
+                       soil_type, latitude, longitude, created_at,
+                       (SELECT COUNT(*) FROM user_login_history AS history
+                        WHERE history.user_id = users.user_id) AS login_count,
+                       (SELECT MAX(logged_in_at) FROM user_login_history AS history
+                        WHERE history.user_id = users.user_id) AS last_login_at
                 FROM users
                 WHERE full_name LIKE ? OR phone LIKE ?
                    OR email LIKE ? OR user_id LIKE ?
@@ -1106,7 +1123,11 @@ def api_admin_farmers():
             farmers = conn.execute("""
                 SELECT user_id, full_name, phone, email, state, district,
                        village, pin_code, farming_type, farm_size, crops,
-                       soil_type, latitude, longitude, created_at
+                       soil_type, latitude, longitude, created_at,
+                       (SELECT COUNT(*) FROM user_login_history AS history
+                        WHERE history.user_id = users.user_id) AS login_count,
+                       (SELECT MAX(logged_in_at) FROM user_login_history AS history
+                        WHERE history.user_id = users.user_id) AS last_login_at
                 FROM users
                 ORDER BY id DESC
                 LIMIT ? OFFSET ?
@@ -1118,6 +1139,66 @@ def api_admin_farmers():
         "page": page,
         "page_size": page_size,
         "farmers": [dict(farmer) for farmer in farmers]
+    })
+
+
+@app.route("/api/admin/farmers/<user_id>/logins")
+def api_admin_farmer_logins(user_id):
+    logged_in_user_id = _api_user_id(require_bearer=True)
+    if not logged_in_user_id:
+        return jsonify({
+            "success": False,
+            "message": "A valid bearer token is required."
+        }), 401
+    if not ADMIN_USER_ID:
+        return jsonify({
+            "success": False,
+            "message": "Admin access is not configured."
+        }), 403
+    if logged_in_user_id.strip().upper() != ADMIN_USER_ID:
+        return jsonify({
+            "success": False,
+            "message": "Access denied. Admin only."
+        }), 403
+
+    try:
+        page = max(1, int(request.args.get("page", "1")))
+    except ValueError:
+        page = 1
+    page = min(page, 2_147_483_647)
+    page_size = 50
+    offset = (page - 1) * page_size
+
+    with get_connection() as conn:
+        farmer = conn.execute(
+            "SELECT 1 FROM users WHERE user_id = ?",
+            (user_id,)
+        ).fetchone()
+        if not farmer:
+            return jsonify({
+                "success": False,
+                "message": "Farmer profile not found."
+            }), 404
+
+        total = conn.execute(
+            "SELECT COUNT(*) FROM user_login_history WHERE user_id = ?",
+            (user_id,)
+        ).fetchone()[0]
+        logins = conn.execute("""
+            SELECT logged_in_at
+            FROM user_login_history
+            WHERE user_id = ?
+            ORDER BY logged_in_at DESC, id DESC
+            LIMIT ? OFFSET ?
+        """, (user_id, page_size, offset)).fetchall()
+
+    return jsonify({
+        "success": True,
+        "user_id": user_id,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "logins": [dict(login) for login in logins]
     })
 
 

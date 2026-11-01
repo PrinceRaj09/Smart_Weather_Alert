@@ -2,6 +2,7 @@
 import math
 import os
 import sqlite3
+from contextlib import contextmanager
 from werkzeug.security import generate_password_hash
 
 from crop_advisor import SOIL_TYPES
@@ -9,10 +10,15 @@ from crop_advisor import SOIL_TYPES
 DATABASE_NAME = os.environ.get("DATABASE_PATH", "weather_alert.db")
 
 
+@contextmanager
 def get_connection():
     conn = sqlite3.connect(DATABASE_NAME)
     conn.row_factory = sqlite3.Row
-    return conn
+    try:
+        with conn:
+            yield conn
+    finally:
+        conn.close()
 
 
 def init_db():
@@ -59,6 +65,19 @@ def init_db():
                 conn.execute(
                     f"ALTER TABLE users ADD COLUMN {name} {data_type}"
                 )
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS user_login_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                logged_in_at TEXT NOT NULL
+                    DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+            )
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_login_history_user_time
+            ON user_login_history(user_id, logged_in_at DESC)
+        """)
 
         conn.execute("""
             CREATE TABLE IF NOT EXISTS password_reset_otps (
@@ -108,6 +127,14 @@ def init_db():
         """)
 
     print("Database initialized successfully!")
+
+
+def record_user_login(user_id):
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO user_login_history (user_id) VALUES (?)",
+            (user_id,)
+        )
 
 
 def register_user(data):

@@ -170,6 +170,8 @@
                     <th>Latitude</th>
                     <th>Longitude</th>
                     <th>Registration Date</th>
+                    <th>Login Count</th>
+                    <th>Last Login (UTC)</th>
                     <th>Profile Picture</th>
                 </tr>
             </thead>
@@ -192,6 +194,8 @@
                     <td>{{ farmer.latitude if farmer.latitude is not none else '-' }}</td>
                     <td>{{ farmer.longitude if farmer.longitude is not none else '-' }}</td>
                     <td>{{ farmer.created_at or '-' }}</td>
+                    <td>{{ farmer.login_count }}</td>
+                    <td>{{ farmer.last_login_at or 'Never logged in' }}</td>
                     <td>
                         {% if farmer.profile_picture %}
                         <img
@@ -206,7 +210,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="16" class="empty">
+                    <td colspan="18" class="empty">
                         No registered farmers found.
                     </td>
                 </tr>

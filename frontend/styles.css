@@ -252,6 +252,14 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .farmers-table th, .farmers-table td { min-width: 105px; padding: 10px; border-bottom: 1px solid #e8eee8; text-align: left; vertical-align: top; }
 .farmers-table th { background: #eff6f0; color: #395c44; }
 .farmers-table tr:last-child td { border-bottom: 0; }
+.login-last-seen { display: block; min-width: 150px; margin: 4px 0 7px; color: var(--ink-soft); }
+.login-history-toggle { white-space: nowrap; }
+.login-history-panel { min-width: 220px; max-width: 340px; margin-top: 9px; padding: 11px; border: 1px solid var(--line); border-radius: 11px; background: #f8fbf8; white-space: normal; }
+.login-history-panel[hidden] { display: none; }
+.login-history-panel ol { display: grid; gap: 5px; max-height: 220px; overflow: auto; margin: 8px 0; padding-left: 22px; color: #405b48; font-size: 11px; }
+.login-history-panel > small, .login-history-pages { color: var(--ink-soft); font-size: 10px; }
+.login-history-pages { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.login-history-pages .button { min-height: 30px; padding: 5px 8px; font-size: 10px; }
 .admin-pages { display: flex; gap: 10px; align-items: center; justify-content: flex-end; margin-top: 12px; color: var(--ink-soft); font-size: 12px; }
 .empty-state { padding: 20px; border-radius: 13px; background: #f3f7f3; color: var(--ink-soft); text-align: center; }
 .toast { position: fixed; z-index: 10; right: 20px; bottom: 20px; max-width: min(440px, calc(100vw - 40px)); padding: 13px 17px; transform: translateY(130%); border: 1px solid #ffffffa8; border-radius: 13px; background: #153f2f; box-shadow: 0 12px 30px #153d2b3b; color: white; opacity: 0; transition: .25s ease; }
