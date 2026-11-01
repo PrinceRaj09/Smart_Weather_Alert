@@ -52,6 +52,29 @@ class LoginHistoryTests(unittest.TestCase):
         self.assertTrue(success, message)
         return user_id
 
+    def test_home_shows_admin_login_and_only_shows_dashboard_for_sessions(self):
+        client = app.test_client()
+
+        guest_home = client.get("/")
+        self.assertEqual(guest_home.status_code, 200)
+        self.assertIn(b"Login as admin", guest_home.data)
+        self.assertIn(
+            b"https://login-history-test.vercel.app/?auth=admin",
+            guest_home.data
+        )
+        self.assertNotIn(b"Open my dashboard", guest_home.data)
+        self.assertEqual(client.get("/dashboard").status_code, 302)
+
+        farmer_id = self._register("Regular Farmer", "9876543211")
+        with client.session_transaction() as session:
+            session["user_id"] = farmer_id
+            session["full_name"] = "Regular Farmer"
+
+        signed_in_home = client.get("/")
+        self.assertIn(b"Login as admin", signed_in_home.data)
+        self.assertIn(b"Open my dashboard", signed_in_home.data)
+        self.assertIn(b'id="quickLoginForm"', signed_in_home.data)
+
     def test_successful_logins_are_saved_and_admin_can_review_them(self):
         client = app.test_client()
         login_payload = {
@@ -72,6 +95,7 @@ class LoginHistoryTests(unittest.TestCase):
             headers=self.origin_headers
         )
         self.assertEqual(first_login.status_code, 200)
+        self.assertTrue(first_login.get_json()["is_admin"])
         admin_token = first_login.get_json()["access_token"]
         bearer_headers = {
             **self.origin_headers,
@@ -94,6 +118,20 @@ class LoginHistoryTests(unittest.TestCase):
         )
         self.assertEqual(form_login.status_code, 302)
 
+        admin_form_login = client.post(
+            "/login",
+            data={
+                "identifier": self.admin_id,
+                "password": "FarmPass123",
+                "login_mode": "admin"
+            }
+        )
+        self.assertEqual(admin_form_login.status_code, 302)
+        self.assertEqual(
+            admin_form_login.headers["Location"],
+            "/admin/farmers"
+        )
+
         with database.get_connection() as conn:
             records = conn.execute("""
                 SELECT logged_in_at
@@ -101,7 +139,7 @@ class LoginHistoryTests(unittest.TestCase):
                 WHERE user_id = ?
                 ORDER BY id
             """, (self.admin_id,)).fetchall()
-        self.assertEqual(len(records), 3)
+        self.assertEqual(len(records), 4)
         self.assertTrue(all(record["logged_in_at"].endswith("Z") for record in records))
 
         farmer_list = client.get(
@@ -110,7 +148,7 @@ class LoginHistoryTests(unittest.TestCase):
         )
         self.assertEqual(farmer_list.status_code, 200)
         farmer = farmer_list.get_json()["farmers"][0]
-        self.assertEqual(farmer["login_count"], 3)
+        self.assertEqual(farmer["login_count"], 4)
         self.assertEqual(farmer["last_login_at"], records[-1]["logged_in_at"])
 
         history = client.get(
@@ -118,8 +156,8 @@ class LoginHistoryTests(unittest.TestCase):
             headers=bearer_headers
         )
         self.assertEqual(history.status_code, 200)
-        self.assertEqual(history.get_json()["total"], 3)
-        self.assertEqual(len(history.get_json()["logins"]), 3)
+        self.assertEqual(history.get_json()["total"], 4)
+        self.assertEqual(len(history.get_json()["logins"]), 4)
 
         with client.session_transaction() as session:
             session["user_id"] = self.admin_id
@@ -127,7 +165,45 @@ class LoginHistoryTests(unittest.TestCase):
         self.assertEqual(legacy_admin_page.status_code, 200)
         self.assertIn(b"Login Count", legacy_admin_page.data)
         self.assertIn(b"Last Login (UTC)", legacy_admin_page.data)
-        self.assertIn(b">3</td>", legacy_admin_page.data)
+        self.assertIn(b">4</td>", legacy_admin_page.data)
+
+    def test_admin_login_rejects_farmer_accounts(self):
+        farmer_id = self._register("Regular Farmer", "9876543211")
+        client = app.test_client()
+
+        farmer_login = client.post(
+            "/api/auth/login",
+            json={
+                "identifier": farmer_id,
+                "password": "FarmPass123"
+            },
+            headers=self.origin_headers
+        )
+        self.assertEqual(farmer_login.status_code, 200)
+        self.assertFalse(farmer_login.get_json()["is_admin"])
+
+        rejected_login = client.post(
+            "/login",
+            data={
+                "identifier": farmer_id,
+                "password": "FarmPass123",
+                "login_mode": "admin"
+            }
+        )
+        self.assertEqual(rejected_login.status_code, 403)
+        self.assertIn(
+            b"does not have administrator access",
+            rejected_login.data
+        )
+
+        protected_data = client.get(
+            "/api/admin/farmers",
+            headers={
+                **self.origin_headers,
+                "Authorization": f"Bearer {farmer_login.get_json()['access_token']}"
+            }
+        )
+        self.assertEqual(protected_data.status_code, 403)
 
     @classmethod
     def tearDownClass(cls):

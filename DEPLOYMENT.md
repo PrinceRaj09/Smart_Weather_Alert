@@ -53,9 +53,11 @@ preserved.
 6. Test account registration and login from the Vercel URL. For a local
    static build, run `npm run build` from `frontend` with
    `RENDER_API_BASE_URL` set in the environment, then serve `frontend/dist`
-   over localhost. Local browser access also requires temporarily configuring
-   the backend's single `VERCEL_ORIGIN` as that localhost origin; restore the
-   production Vercel origin afterward.
+   over localhost (for example, `http://127.0.0.1:8766`). Local browser access
+   also requires temporarily configuring the backend's single `VERCEL_ORIGIN`
+   as that exact localhost origin; the home-page admin link uses this setting
+   to open the static frontend's admin login. Restore the production Vercel
+   origin afterward.
 
 No custom domain is required. The exact Vercel `*.vercel.app` production
 origin is the CORS allowlist entry. If the Vercel production URL changes,

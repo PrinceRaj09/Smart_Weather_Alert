@@ -1535,6 +1535,11 @@ body {
     backdrop-filter: blur(8px);
 }
 
+button.landing-secondary-cta {
+    font-family: inherit;
+    cursor: pointer;
+}
+
 .landing-secondary-cta:hover {
     transform: translateY(-2px);
     background: #ffffff20;

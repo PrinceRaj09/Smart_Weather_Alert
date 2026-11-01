@@ -65,12 +65,17 @@
     topActions.innerHTML = authenticated
       ? '<button class="button secondary small" id="logout-button" type="button">Sign out</button>'
       : '<button class="button quiet small" data-auth-mode="login" type="button">Log in</button>' +
+        '<button class="button secondary small" data-auth-mode="admin" type="button">Login as admin</button>' +
         '<button class="button small" data-auth-mode="register" type="button">Create account</button>';
+    topActions.querySelectorAll("[data-auth-mode]").forEach((button) => {
+      button.addEventListener("click", () => renderWelcome(button.dataset.authMode));
+    });
   }
 
   function renderWelcome(mode = "login") {
     setTopActions(false);
     const registration = mode === "register";
+    const adminLogin = mode === "admin";
     app.innerHTML = `
       <section class="welcome">
         <div class="welcome-copy">
@@ -84,36 +89,41 @@
           </ul>
         </div>
         <section class="auth-card" aria-labelledby="auth-title">
-          <div class="eyebrow">${registration ? "Join AgriWeather" : "Welcome back"}</div>
-          <h2 id="auth-title">${registration ? "Create your farmer account" : "Sign in to your farm"}</h2>
+          <div class="eyebrow">${registration ? "Join AgriWeather" : adminLogin ? "Administrator access" : "Welcome back"}</div>
+          <h2 id="auth-title">${registration ? "Create your farmer account" : adminLogin ? "Admin login" : "Sign in to your farm"}</h2>
           <p>${registration
             ? "Add your farm details to receive relevant local guidance."
-            : "Your weather dashboard is ready when you are."}</p>
+            : adminLogin
+              ? "Sign in with the account configured for administrator access."
+              : "Your weather dashboard is ready when you are."}</p>
           <form id="auth-form">
             ${registration ? registrationFields() : loginFields()}
             <p class="form-message" id="form-message" role="status"></p>
             <button class="button form-submit" type="submit">
-              ${registration ? "Create account" : "Log in"}
+              ${registration ? "Create account" : adminLogin ? "Login as admin" : "Log in"}
             </button>
           </form>
           <div class="auth-switch">
-            ${registration ? "Already registered?" : "New to AgriWeather?"}
+            ${registration ? "Already registered?" : adminLogin ? "Farmer account?" : "New to AgriWeather?"}
             <button class="link-button" id="switch-auth" type="button">
-              ${registration ? "Log in" : "Create an account"}
+              ${registration || adminLogin ? "Log in" : "Create an account"}
             </button>
+            ${!registration && !adminLogin
+              ? '<button class="link-button admin-login-link" data-auth-mode="admin" type="button">Login as admin</button>'
+              : ""}
           </div>
         </section>
       </section>`;
 
-    document.querySelectorAll("[data-auth-mode]").forEach((button) => {
-      button.addEventListener("click", () => renderWelcome(button.dataset.authMode));
-    });
     document.getElementById("switch-auth").addEventListener("click", () => {
-      renderWelcome(registration ? "login" : "register");
+      renderWelcome(registration || adminLogin ? "login" : "register");
     });
     document.getElementById("auth-form").addEventListener("submit", (event) => {
       event.preventDefault();
-      submitAuth(event.currentTarget, registration);
+      submitAuth(event.currentTarget, registration, adminLogin);
+    });
+    app.querySelectorAll("[data-auth-mode]").forEach((button) => {
+      button.addEventListener("click", () => renderWelcome(button.dataset.authMode));
     });
     if (registration) bindLocationButton();
   }
@@ -199,7 +209,7 @@
     });
   }
 
-  async function submitAuth(form, registration) {
+  async function submitAuth(form, registration, adminLogin = false) {
     const message = document.getElementById("form-message");
     const submit = form.querySelector('[type="submit"]');
     message.textContent = "";
@@ -214,8 +224,14 @@
         registration ? "/api/auth/register" : "/api/auth/login",
         { method: "POST", body: JSON.stringify(values) }
       );
+      if (adminLogin && !result.is_admin) {
+        message.textContent = "This account does not have administrator access.";
+        return;
+      }
       setToken(result.access_token);
-      showToast(registration ? "Account created successfully." : "Welcome back.");
+      showToast(registration
+        ? "Account created successfully."
+        : adminLogin ? "Admin access granted." : "Welcome back.");
       await loadDashboard();
     } catch (error) {
       message.textContent = error.message;
@@ -333,7 +349,6 @@
         <div><div class="eyebrow">Your farm overview · ${escapeHtml(profile.user_id)}</div>
           <h1>Good day, ${farmerName}</h1>
           <p>${escapeHtml([profile.village, profile.district, profile.state].filter(Boolean).join(", "))}</p></div>
-        ${profile.is_admin ? '<button class="button secondary" id="admin-toggle" type="button">Admin farmers</button>' : ""}
       </section>
       <section class="dashboard-grid">
         <article class="panel weather-panel">
@@ -377,15 +392,6 @@
           <div class="crop-list">${crops}</div>
           ${weatherData?.crop_suggestions?.note ? `<p class="panel-subtitle" style="margin-top:12px">${escapeHtml(weatherData.crop_suggestions.note)}</p>` : ""}
         </article>
-        <article class="panel admin-panel" id="admin-panel" hidden>
-          <h2>Registered farmers</h2><p class="panel-subtitle">This list is available only to the account configured as ADMIN_USER_ID.</p>
-          <form class="admin-toolbar" id="admin-search-form">
-            <input class="search-input" name="search" value="${escapeHtml(adminSearch)}" placeholder="Search farmer, ID, phone or email">
-            <button class="button small" type="submit">Search</button>
-            <span id="admin-count" class="panel-subtitle"></span>
-          </form>
-          <div id="admin-results"><div class="empty-state">Loading registered farmer data…</div></div>
-        </article>
       </section>`;
 
     document.getElementById("logout-button").addEventListener("click", logout);
@@ -400,20 +406,49 @@
       document.getElementById("edit-profile").hidden = false;
     });
     document.getElementById("profile-edit-form").addEventListener("submit", saveProfile);
-    document.getElementById("admin-toggle")?.addEventListener("click", toggleAdmin);
+    document.getElementById("retry-weather")?.addEventListener("click", refreshWeather);
+  }
+
+  function bindAdminSearch() {
     document.getElementById("admin-search-form").addEventListener("submit", (event) => {
       event.preventDefault();
       adminSearch = new FormData(event.currentTarget).get("search").trim();
       adminPage = 1;
       loadAdminFarmers();
     });
-    document.getElementById("retry-weather")?.addEventListener("click", refreshWeather);
+  }
+
+  function renderAdminPage(profile) {
+    setTopActions(true);
+    app.innerHTML = `
+      <section class="dashboard-head">
+        <div><div class="eyebrow">Administrator · ${escapeHtml(profile.user_id)}</div>
+          <h1>Registered farmer data</h1>
+          <p>Search and review accounts registered with AgriWeather.</p></div>
+      </section>
+      <section class="panel admin-panel" id="admin-panel">
+        <h2>All registered farmers</h2>
+        <p class="panel-subtitle">Login counts and individual login history are available for each account.</p>
+        <form class="admin-toolbar" id="admin-search-form">
+          <input class="search-input" name="search" value="${escapeHtml(adminSearch)}" placeholder="Search farmer, ID, phone or email">
+          <button class="button small" type="submit">Search</button>
+          <span id="admin-count" class="panel-subtitle"></span>
+        </form>
+        <div id="admin-results"><div class="empty-state">Loading registered farmer data…</div></div>
+      </section>`;
+    document.getElementById("logout-button").addEventListener("click", logout);
+    bindAdminSearch();
+    loadAdminFarmers();
   }
 
   async function loadDashboard() {
     app.innerHTML = '<div class="loading-card">Loading your farm dashboard…</div>';
     try {
       const profile = await api("/api/profile");
+      if (profile.profile.is_admin) {
+        renderAdminPage(profile.profile);
+        return;
+      }
       let weather = null;
       let weatherError = "";
       try {
@@ -475,15 +510,6 @@
     } finally {
       clearToken();
       renderWelcome();
-    }
-  }
-
-  async function toggleAdmin() {
-    const panel = document.getElementById("admin-panel");
-    panel.hidden = !panel.hidden;
-    if (!panel.hidden) {
-      panel.scrollIntoView({ behavior: "smooth", block: "start" });
-      await loadAdminFarmers();
     }
   }
 
@@ -595,6 +621,7 @@
     return;
   }
 
+  const requestedAuthMode = new URLSearchParams(window.location.search).get("auth");
   if (token) loadDashboard();
-  else renderWelcome();
+  else renderWelcome(requestedAuthMode === "admin" ? "admin" : "login");
 })();

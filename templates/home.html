@@ -40,6 +40,17 @@
                     <a class="landing-secondary-cta" href="#how-it-works">
                         See how it works <span aria-hidden="true">↓</span>
                     </a>
+                    {% if frontend_origin %}
+                    <a class="landing-secondary-cta"
+                       href="{{ frontend_origin }}/?auth=admin">
+                        Login as admin <span aria-hidden="true">→</span>
+                    </a>
+                    {% else %}
+                    <button class="landing-secondary-cta" type="button"
+                            data-open-admin-login>
+                        Login as admin <span aria-hidden="true">→</span>
+                    </button>
+                    {% endif %}
                 </div>
                 <div class="landing-trust-line">
                     <span>📍 Farm-specific</span>
@@ -167,6 +178,17 @@
             <a class="landing-primary-cta" href="{{ url_for('register') }}">
                 Create account <span aria-hidden="true">→</span>
             </a>
+            {% endif %}
+            {% if frontend_origin %}
+            <a class="landing-secondary-cta"
+               href="{{ frontend_origin }}/?auth=admin">
+                Login as admin <span aria-hidden="true">→</span>
+            </a>
+            {% else %}
+            <button class="landing-secondary-cta" type="button"
+                    data-open-admin-login>
+                Login as admin <span aria-hidden="true">→</span>
+            </button>
             {% endif %}
         </section>
     </main>

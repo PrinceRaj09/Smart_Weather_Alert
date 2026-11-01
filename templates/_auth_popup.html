@@ -42,6 +42,21 @@
             <span><strong>Log out</strong><small>End this farm session</small></span>
             <span class="auth-choice-arrow">→</span>
         </a>
+        {% if frontend_origin %}
+        <a class="auth-choice auth-choice-login"
+           href="{{ frontend_origin }}/?auth=admin">
+            <span class="auth-choice-icon">🔐</span>
+            <span><strong>Login as admin</strong><small>Review registered farmer data</small></span>
+            <span class="auth-choice-arrow">→</span>
+        </a>
+        {% else %}
+        <button class="auth-choice auth-choice-login" type="button"
+                id="showAdminLoginForm">
+            <span class="auth-choice-icon">🔐</span>
+            <span><strong>Login as admin</strong><small>Review registered farmer data</small></span>
+            <span class="auth-choice-arrow">→</span>
+        </button>
+        {% endif %}
         {% else %}
         <button class="auth-choice auth-choice-login" type="button"
                 id="showLoginForm">
@@ -49,6 +64,21 @@
             <span><strong>Log in</strong><small>Open your farm dashboard</small></span>
             <span class="auth-choice-arrow">→</span>
         </button>
+        {% if frontend_origin %}
+        <a class="auth-choice auth-choice-login"
+           href="{{ frontend_origin }}/?auth=admin">
+            <span class="auth-choice-icon">🔐</span>
+            <span><strong>Login as admin</strong><small>Review registered farmer data</small></span>
+            <span class="auth-choice-arrow">→</span>
+        </a>
+        {% else %}
+        <button class="auth-choice auth-choice-login" type="button"
+                id="showAdminLoginForm">
+            <span class="auth-choice-icon">🔐</span>
+            <span><strong>Login as admin</strong><small>Review registered farmer data</small></span>
+            <span class="auth-choice-arrow">→</span>
+        </button>
+        {% endif %}
         <a class="auth-choice auth-choice-register"
            href="{{ url_for('register') }}">
             <span class="auth-choice-icon">🌾</span>
@@ -57,7 +87,6 @@
         </a>
         {% endif %}
     </div>
-    {% if not session.get('user_id') %}
     <form method="post" action="{{ url_for('login') }}" class="auth-form"
           id="quickLoginForm" hidden>
         <button class="auth-back" type="button" id="backToAuthChoices">
@@ -69,12 +98,12 @@
         <label for="quick-login-password">Password</label>
         <input id="quick-login-password" name="password" type="password"
                required autocomplete="current-password">
-        <button class="auth-submit" type="submit">Log in securely →</button>
+        <input id="quick-login-mode" type="hidden" name="login_mode" value="farmer">
+        <button class="auth-submit" id="quick-login-submit" type="submit">Log in securely →</button>
         <a class="auth-forgot" href="{{ url_for('login') }}#forgot-password">
             Forgot password?
         </a>
     </form>
-    {% endif %}
 </dialog>
 
 <script>
@@ -85,7 +114,26 @@
         const choices = document.getElementById("authChoices");
         const loginForm = document.getElementById("quickLoginForm");
         const showLogin = document.getElementById("showLoginForm");
+        const showAdminLogin = document.getElementById("showAdminLoginForm");
         const backToChoices = document.getElementById("backToAuthChoices");
+        const loginMode = document.getElementById("quick-login-mode");
+        const loginSubmit = document.getElementById("quick-login-submit");
+        const openLogin = admin => {
+            choices.hidden = true;
+            loginForm.hidden = false;
+            loginMode.value = admin ? "admin" : "farmer";
+            loginSubmit.textContent = admin
+                ? "Login as admin →"
+                : "Log in securely →";
+            document.getElementById("quick-login-identifier").focus();
+        };
+        document.querySelectorAll("[data-open-admin-login]").forEach(button => {
+            button.addEventListener("click", event => {
+                event.preventDefault();
+                if (!dialog.open) dialog.showModal();
+                openLogin(true);
+            });
+        });
         document.querySelectorAll("[data-open-auth]").forEach(button => {
             button.addEventListener("click", () => {
                 choices.hidden = false;
@@ -97,13 +145,8 @@
             "click",
             () => dialog.close()
         );
-        showLogin?.addEventListener("click",
-            () => {
-                choices.hidden = true;
-                loginForm.hidden = false;
-                document.getElementById("quick-login-identifier").focus();
-            }
-        );
+        showLogin?.addEventListener("click", () => openLogin(false));
+        showAdminLogin?.addEventListener("click", () => openLogin(true));
         backToChoices?.addEventListener("click",
             () => {
                 loginForm.hidden = true;

@@ -399,7 +399,7 @@ def _send_email_otp(email, otp):
 
 @app.route("/")
 def home():
-    return render_template("home.html")
+    return render_template("home.html", frontend_origin=VERCEL_ORIGIN)
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -592,6 +592,17 @@ def login():
             error="Incorrect password. Please try again."
         )
 
+    admin_login = request.form.get("login_mode") == "admin"
+    is_admin = bool(
+        ADMIN_USER_ID
+        and user["user_id"].strip().upper() == ADMIN_USER_ID
+    )
+    if admin_login and not is_admin:
+        return render_template(
+            "login.html",
+            error="This account does not have administrator access."
+        ), 403
+
     record_user_login(user["user_id"])
 
     # Create a fresh session after successful authentication.
@@ -599,6 +610,8 @@ def login():
     session["user_id"] = user["user_id"]
     session["full_name"] = user["full_name"]
 
+    if admin_login:
+        return redirect(url_for("admin_farmers"))
     return redirect(url_for("dashboard"))
 
 
@@ -630,11 +643,16 @@ def api_login():
         }), 401
 
     record_user_login(user["user_id"])
+    is_admin = bool(
+        ADMIN_USER_ID
+        and user["user_id"].strip().upper() == ADMIN_USER_ID
+    )
 
     return jsonify({
         "success": True,
         "user_id": user["user_id"],
         "full_name": user["full_name"],
+        "is_admin": is_admin,
         "access_token": _issue_access_token(user["user_id"]),
         "token_type": "Bearer",
         "expires_in": ACCESS_TOKEN_TTL_SECONDS
