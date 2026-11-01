@@ -1,0 +1,117 @@
+<header class="site-header">
+    <a class="site-brand" href="{{ url_for('home') }}">
+        <span aria-hidden="true">🌱</span> AgriWeather
+    </a>
+    <button class="site-account-button" type="button" data-open-auth
+            aria-label="Open account options" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 21a8 8 0 0 0-16 0"></path>
+            <circle cx="12" cy="8" r="4"></circle>
+        </svg>
+    </button>
+</header>
+
+<dialog class="auth-dialog" id="globalAuthDialog"
+        aria-labelledby="auth-dialog-title">
+    <div class="auth-dialog-header">
+        <div>
+            <p class="auth-eyebrow">YOUR FARM, YOUR FORECAST</p>
+            <h2 id="auth-dialog-title">Welcome to AgriWeather</h2>
+        </div>
+        <button class="auth-close" type="button" data-close-auth
+                aria-label="Close account window">×</button>
+    </div>
+    <p class="auth-description">
+        {% if session.get('user_id') %}
+        Your farm account is ready.
+        {% else %}
+        Choose how you would like to continue.
+        {% endif %}
+    </p>
+    <div class="auth-choices" id="authChoices">
+        {% if session.get('user_id') %}
+        <a class="auth-choice auth-choice-register"
+           href="{{ url_for('register') }}">
+            <span class="auth-choice-icon">🌾</span>
+            <span><strong>Create account</strong><small>Set up another farm profile</small></span>
+            <span class="auth-choice-arrow">→</span>
+        </a>
+        <a class="auth-choice auth-choice-logout"
+           href="{{ url_for('logout') }}">
+            <span class="auth-choice-icon">↪</span>
+            <span><strong>Log out</strong><small>End this farm session</small></span>
+            <span class="auth-choice-arrow">→</span>
+        </a>
+        {% else %}
+        <button class="auth-choice auth-choice-login" type="button"
+                id="showLoginForm">
+            <span class="auth-choice-icon">👋</span>
+            <span><strong>Log in</strong><small>Open your farm dashboard</small></span>
+            <span class="auth-choice-arrow">→</span>
+        </button>
+        <a class="auth-choice auth-choice-register"
+           href="{{ url_for('register') }}">
+            <span class="auth-choice-icon">🌾</span>
+            <span><strong>Create account</strong><small>Set up your farm profile</small></span>
+            <span class="auth-choice-arrow">→</span>
+        </a>
+        {% endif %}
+    </div>
+    {% if not session.get('user_id') %}
+    <form method="post" action="{{ url_for('login') }}" class="auth-form"
+          id="quickLoginForm" hidden>
+        <button class="auth-back" type="button" id="backToAuthChoices">
+            ← All account options
+        </button>
+        <label for="quick-login-identifier">Mobile, email or Farmer ID</label>
+        <input id="quick-login-identifier" name="identifier" required
+               autocomplete="username">
+        <label for="quick-login-password">Password</label>
+        <input id="quick-login-password" name="password" type="password"
+               required autocomplete="current-password">
+        <button class="auth-submit" type="submit">Log in securely →</button>
+        <a class="auth-forgot" href="{{ url_for('login') }}#forgot-password">
+            Forgot password?
+        </a>
+    </form>
+    {% endif %}
+</dialog>
+
+<script>
+    (() => {
+        const dialog = document.getElementById("globalAuthDialog");
+        if (!dialog) return;
+
+        const choices = document.getElementById("authChoices");
+        const loginForm = document.getElementById("quickLoginForm");
+        const showLogin = document.getElementById("showLoginForm");
+        const backToChoices = document.getElementById("backToAuthChoices");
+        document.querySelectorAll("[data-open-auth]").forEach(button => {
+            button.addEventListener("click", () => {
+                choices.hidden = false;
+                if (loginForm) loginForm.hidden = true;
+                dialog.showModal();
+            });
+        });
+        dialog.querySelector("[data-close-auth]").addEventListener(
+            "click",
+            () => dialog.close()
+        );
+        showLogin?.addEventListener("click",
+            () => {
+                choices.hidden = true;
+                loginForm.hidden = false;
+                document.getElementById("quick-login-identifier").focus();
+            }
+        );
+        backToChoices?.addEventListener("click",
+            () => {
+                loginForm.hidden = true;
+                choices.hidden = false;
+            }
+        );
+        dialog.addEventListener("click", event => {
+            if (event.target === dialog) dialog.close();
+        });
+    })();
+</script>

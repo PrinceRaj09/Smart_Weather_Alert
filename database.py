@@ -1,7 +1,10 @@
 
+import math
 import os
 import sqlite3
 from werkzeug.security import generate_password_hash
+
+from crop_advisor import SOIL_TYPES
 
 DATABASE_NAME = os.environ.get("DATABASE_PATH", "weather_alert.db")
 
@@ -47,6 +50,7 @@ def init_db():
             "farming_type": "TEXT",
             "farm_size": "REAL",
             "crops": "TEXT",
+            "soil_type": "TEXT",
             "profile_picture": "TEXT"
         }
 
@@ -160,7 +164,8 @@ def register_user(data):
         "pin_code",
         "farming_type",
         "farm_size",
-        "crops"
+        "crops",
+        "soil_type"
     ]
 
     for field in required_fields:
@@ -170,6 +175,17 @@ def register_user(data):
             return False, f"{field.replace('_', ' ').title()} is required.", None
 
     pin_code = str(data.get("pin_code", "")).strip()
+    soil_type = str(data.get("soil_type", "")).strip()
+
+    if soil_type.casefold() not in {
+        soil.casefold() for soil in SOIL_TYPES
+    }:
+        return False, "Choose a supported soil type.", None
+
+    soil_type = next(
+        soil for soil in SOIL_TYPES
+        if soil.casefold() == soil_type.casefold()
+    )
 
     if not pin_code.isdigit() or len(pin_code) != 6:
         return False, "Enter a valid 6-digit PIN code.", None
@@ -177,7 +193,7 @@ def register_user(data):
     try:
         farm_size = float(data["farm_size"])
 
-        if farm_size <= 0:
+        if not math.isfinite(farm_size) or farm_size <= 0:
             return False, "Farm size must be greater than zero.", None
 
     except (TypeError, ValueError):
@@ -216,11 +232,12 @@ def register_user(data):
                     farming_type,
                     farm_size,
                     crops,
+                    soil_type,
                     latitude,
                     longitude,
                     profile_picture
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 full_name,
                 phone,
@@ -233,6 +250,7 @@ def register_user(data):
                 str(data["farming_type"]).strip(),
                 farm_size,
                 str(data["crops"]).strip(),
+                soil_type,
                 latitude,
                 longitude,
                 data.get("profile_picture")

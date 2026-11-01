@@ -2,8 +2,10 @@ import os
 import hashlib
 import hmac
 import io
+import math
 import secrets
 import smtplib
+import sqlite3
 import time
 import uuid
 import warnings
@@ -27,6 +29,7 @@ from werkzeug.security import (
     generate_password_hash
 )
 
+from crop_advisor import SOIL_TYPES, suggest_crops
 from database import (
     init_db,
     register_user,
@@ -213,13 +216,13 @@ def _send_email_otp(email, otp):
 
 @app.route("/")
 def home():
-    return render_template("register.html")
+    return render_template("home.html")
 
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "GET":
-        return render_template("register.html")
+        return render_template("register.html", soil_types=SOIL_TYPES)
 
     data = request.get_json(silent=True)
 
@@ -290,11 +293,15 @@ def register():
             "message": message
         }), 400
 
+    session.clear()
+    session["user_id"] = user_id
+    session["full_name"] = full_name
+
     return jsonify({
         "success": True,
         "message": message,
         "user_id": user_id,
-        "redirect": url_for("login")
+        "redirect": url_for("dashboard")
     }), 201
 
 
@@ -652,7 +659,8 @@ def dashboard():
     return render_template(
         "dashboard.html",
         full_name=session.get("full_name"),
-        user_id=session.get("user_id")
+        user_id=session.get("user_id"),
+        soil_types=SOIL_TYPES
     )
 
 
@@ -699,6 +707,7 @@ def admin_farmers():
                     farming_type,
                     farm_size,
                     crops,
+                    soil_type,
                     latitude,
                     longitude,
                     created_at,
@@ -725,6 +734,7 @@ def admin_farmers():
                     farming_type,
                     farm_size,
                     crops,
+                    soil_type,
                     latitude,
                     longitude,
                     created_at,
@@ -783,6 +793,19 @@ def weather_page():
             "error": "Weather data could not be fetched"
         }), 502
 
+    user_id = session.get("user_id")
+    if user_id:
+        with get_connection() as conn:
+            farmer = conn.execute(
+                "SELECT soil_type FROM users WHERE user_id = ?",
+                (user_id,)
+            ).fetchone()
+        if farmer and farmer["soil_type"]:
+            weather_data["crop_suggestions"] = suggest_crops(
+                farmer["soil_type"],
+                weather_data
+            )
+
     return jsonify(weather_data)
 
 
@@ -816,6 +839,7 @@ def api_profile():
                 farming_type,
                 farm_size,
                 crops,
+                soil_type,
                 latitude,
                 longitude,
                 profile_picture
@@ -843,6 +867,233 @@ def api_profile():
                 else None
             )
         }
+    })
+
+
+@app.route("/api/profile", methods=["POST"])
+def update_profile():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({
+            "success": False,
+            "message": "Please login first."
+        }), 401
+
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({
+            "success": False,
+            "message": "Invalid profile details."
+        }), 400
+
+    text_fields = (
+        "full_name", "phone", "email", "village", "district", "state",
+        "pin_code", "farming_type", "farm_size", "crops", "soil_type",
+        "latitude", "longitude"
+    )
+    if any(
+        field in data and not isinstance(data[field], (str, int, float))
+        for field in text_fields
+    ):
+        return jsonify({
+            "success": False,
+            "message": "Profile details must be text or numeric values."
+        }), 400
+
+    values = {
+        field: str(data.get(field, "")).strip()
+        for field in text_fields
+    }
+    if (
+        not values["full_name"]
+        or len(values["full_name"]) > 100
+    ):
+        return jsonify({
+            "success": False,
+            "message": "Please enter a valid full name."
+        }), 400
+
+    phone = values["phone"]
+    if (
+        len(phone) != 10
+        or not phone.isdigit()
+        or phone[0] not in "6789"
+    ):
+        return jsonify({
+            "success": False,
+            "message": "Enter a valid 10-digit Indian mobile number."
+        }), 400
+
+    email = values["email"].lower()
+    email_parts = email.split("@")
+    if (
+        len(email_parts) != 2
+        or len(email) > 254
+        or not email_parts[0]
+        or "." not in email_parts[1]
+        or any(character.isspace() for character in email)
+    ):
+        return jsonify({
+            "success": False,
+            "message": "Enter a valid email address."
+        }), 400
+
+    for field in ("village", "district", "state", "farming_type"):
+        if not values[field] or len(values[field]) > 100:
+            return jsonify({
+                "success": False,
+                "message": f"Please enter a valid {field.replace('_', ' ')}."
+            }), 400
+
+    pin_code = values["pin_code"]
+    if len(pin_code) != 6 or not pin_code.isdigit():
+        return jsonify({
+            "success": False,
+            "message": "Enter a valid 6-digit PIN code."
+        }), 400
+
+    if not values["crops"] or len(values["crops"]) > 500:
+        return jsonify({
+            "success": False,
+            "message": "Enter your crops (maximum 500 characters)."
+        }), 400
+
+    try:
+        farm_size = float(values["farm_size"])
+        if not math.isfinite(farm_size) or farm_size <= 0:
+            raise ValueError
+    except ValueError:
+        return jsonify({
+            "success": False,
+            "message": "Farm size must be a number greater than zero."
+        }), 400
+
+    soil_type = next(
+        (
+            soil for soil in SOIL_TYPES
+            if soil.casefold() == values["soil_type"].casefold()
+        ),
+        None
+    )
+    if not soil_type:
+        return jsonify({
+            "success": False,
+            "message": "Choose a supported soil type."
+        }), 400
+
+    latitude = values["latitude"]
+    longitude = values["longitude"]
+    if bool(latitude) != bool(longitude):
+        return jsonify({
+            "success": False,
+            "message": "Enter both GPS coordinates or leave both empty."
+        }), 400
+    if latitude:
+        try:
+            latitude = float(latitude)
+            longitude = float(longitude)
+            if (
+                not math.isfinite(latitude)
+                or not math.isfinite(longitude)
+                or not -90 <= latitude <= 90
+                or not -180 <= longitude <= 180
+            ):
+                raise ValueError
+        except ValueError:
+            return jsonify({
+                "success": False,
+                "message": "Enter valid GPS coordinates."
+            }), 400
+    else:
+        latitude = None
+        longitude = None
+
+    try:
+        with get_connection() as conn:
+            duplicate = conn.execute("""
+                SELECT user_id FROM users
+                WHERE (phone = ? OR lower(email) = lower(?))
+                  AND user_id != ?
+                LIMIT 1
+            """, (phone, email, user_id)).fetchone()
+            if duplicate:
+                return jsonify({
+                    "success": False,
+                    "message": "That mobile number or email is already in use."
+                }), 409
+
+            cursor = conn.execute("""
+                UPDATE users
+                SET full_name = ?, phone = ?, email = ?, village = ?,
+                    district = ?, state = ?, pin_code = ?, farming_type = ?,
+                    farm_size = ?, crops = ?, soil_type = ?, latitude = ?,
+                    longitude = ?
+                WHERE user_id = ?
+            """, (
+                values["full_name"], phone, email, values["village"],
+                values["district"], values["state"], pin_code,
+                values["farming_type"], farm_size, values["crops"], soil_type,
+                latitude, longitude, user_id
+            ))
+            if cursor.rowcount == 0:
+                return jsonify({
+                    "success": False,
+                    "message": "Farmer profile not found."
+                }), 404
+    except sqlite3.IntegrityError:
+        return jsonify({
+            "success": False,
+            "message": "That mobile number or email is already in use."
+        }), 409
+
+    session["full_name"] = values["full_name"]
+    return jsonify({
+        "success": True,
+        "message": "Profile details updated successfully."
+    })
+
+
+@app.route("/api/profile/soil", methods=["POST"])
+def update_soil_type():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({
+            "success": False,
+            "message": "Please login first."
+        }), 401
+
+    data = request.get_json(silent=True)
+    soil_type = (
+        data.get("soil_type", "").strip()
+        if isinstance(data, dict) and isinstance(data.get("soil_type"), str)
+        else ""
+    )
+    soil = next(
+        (value for value in SOIL_TYPES
+         if value.casefold() == soil_type.casefold()),
+        None
+    )
+    if not soil:
+        return jsonify({
+            "success": False,
+            "message": "Choose a supported soil type."
+        }), 400
+
+    with get_connection() as conn:
+        cursor = conn.execute(
+            "UPDATE users SET soil_type = ? WHERE user_id = ?",
+            (soil, user_id)
+        )
+        if cursor.rowcount == 0:
+            return jsonify({
+                "success": False,
+                "message": "Farmer profile not found."
+            }), 404
+
+    return jsonify({
+        "success": True,
+        "soil_type": soil,
+        "message": "Soil type saved. Crop suggestions are being refreshed."
     })
 
 
@@ -965,7 +1216,7 @@ def api_my_weather():
     # 2. Get the farmer's saved GPS location
     with get_connection() as conn:
         farmer = conn.execute("""
-            SELECT latitude, longitude
+            SELECT latitude, longitude, soil_type
             FROM users
             WHERE user_id = ?
             LIMIT 1
@@ -995,6 +1246,12 @@ def api_my_weather():
             "success": False,
             "message": "Weather service is temporarily unavailable."
         }), 502
+
+    if farmer["soil_type"]:
+        weather_data["crop_suggestions"] = suggest_crops(
+            farmer["soil_type"],
+            weather_data
+        )
 
     # 5. Return weather data
     return jsonify({

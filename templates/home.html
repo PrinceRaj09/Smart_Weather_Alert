@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#103c2c">
+    <meta name="description"
+          content="Local weather, farm alerts and soil-aware crop suggestions for your farm.">
+    <link rel="icon" type="image/svg+xml"
+          href="{{ url_for('static', filename='agriweather-icon.svg') }}">
+    <title>AgriWeather | Weather-smart farming</title>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='3d-theme.css', v='4') }}">
+</head>
+<body class="landing-page">
+    {% include "_auth_popup.html" %}
+
+    <main>
+        <section class="landing-hero">
+            <div class="landing-hero-backdrop" aria-hidden="true"></div>
+            <div class="landing-hero-copy">
+                <span class="landing-eyebrow">
+                    <span class="live-dot"></span> A smarter way to plan your farm
+                </span>
+                <h1>Better farm decisions<br>start with <span>local weather.</span></h1>
+                <p>
+                    AgriWeather brings your farm's forecast, timely weather
+                    alerts and soil-aware crop ideas together in one simple place.
+                </p>
+                <div class="landing-hero-actions">
+                    {% if session.get('user_id') %}
+                    <a class="landing-primary-cta" href="{{ url_for('dashboard') }}">
+                        Open my dashboard <span aria-hidden="true">→</span>
+                    </a>
+                    {% else %}
+                    <a class="landing-primary-cta" href="{{ url_for('register') }}">
+                        Create your farm profile <span aria-hidden="true">→</span>
+                    </a>
+                    {% endif %}
+                    <a class="landing-secondary-cta" href="#how-it-works">
+                        See how it works <span aria-hidden="true">↓</span>
+                    </a>
+                </div>
+                <div class="landing-trust-line">
+                    <span>📍 Farm-specific</span>
+                    <span>🌱 Soil-aware</span>
+                    <span>🔔 Weather-led</span>
+                </div>
+            </div>
+
+            <div class="landing-weather-scene" aria-label="Illustration of farm weather dashboard">
+                <div class="weather-orbit orbit-one"></div>
+                <div class="weather-orbit orbit-two"></div>
+                <div class="weather-sun" aria-hidden="true">☀️</div>
+                <div class="weather-cloud cloud-one" aria-hidden="true">☁️</div>
+                <div class="weather-cloud cloud-two" aria-hidden="true">☁️</div>
+                <div class="landing-weather-card">
+                    <div class="preview-card-header">
+                        <span class="preview-live"><i></i> FARM WEATHER</span>
+                        <span>Today</span>
+                    </div>
+                    <div class="preview-temperature">
+                        <span aria-hidden="true">🌤️</span>
+                        <strong>28°</strong><small>C</small>
+                    </div>
+                    <p class="preview-condition">A good day to check your crops</p>
+                    <div class="preview-weather-stats">
+                        <div><span>💧</span><strong>64%</strong><small>Humidity</small></div>
+                        <div><span>🌧️</span><strong>10%</strong><small>Rain chance</small></div>
+                        <div><span>🍃</span><strong>8 km/h</strong><small>Wind</small></div>
+                    </div>
+                </div>
+                <div class="floating-advice-card">
+                    <span class="floating-advice-icon">🌾</span>
+                    <span><strong>Plan with confidence</strong><small>Weather + your farm profile</small></span>
+                    <span class="floating-check">✓</span>
+                </div>
+                <div class="scene-ground" aria-hidden="true">
+                    <span>🌱</span><span>🌿</span><span>🌱</span>
+                    <span>🌿</span><span>🌱</span><span>🌿</span>
+                </div>
+            </div>
+            <a class="scroll-cue" href="#how-it-works">
+                <span></span> Scroll to explore
+            </a>
+        </section>
+
+        <section class="landing-section works-section" id="how-it-works">
+            <div class="landing-section-heading reveal-on-scroll">
+                <span class="section-eyebrow">HOW IT WORKS</span>
+                <h2>Your farm's daily decisions,<br><span>made a little clearer.</span></h2>
+                <p>Get started in three straightforward steps. Your farm information stays together in your dashboard.</p>
+            </div>
+            <div class="journey-grid">
+                <article class="journey-card reveal-on-scroll">
+                    <span class="journey-number">01</span>
+                    <div class="journey-icon">📍</div>
+                    <h3>Add your farm</h3>
+                    <p>Save your location, soil type, crops and farm details in a guided account setup.</p>
+                    <span class="journey-link">Your farm, your profile</span>
+                </article>
+                <article class="journey-card reveal-on-scroll">
+                    <span class="journey-number">02</span>
+                    <div class="journey-icon">🌦️</div>
+                    <h3>See local conditions</h3>
+                    <p>Check current weather and the upcoming hourly forecast for your saved farm location.</p>
+                    <span class="journey-link">Forecast at a glance</span>
+                </article>
+                <article class="journey-card reveal-on-scroll">
+                    <span class="journey-number">03</span>
+                    <div class="journey-icon">🌱</div>
+                    <h3>Plan with context</h3>
+                    <p>Review weather alerts and a practical crop shortlist informed by soil type and temperature.</p>
+                    <span class="journey-link">Decisions with more context</span>
+                </article>
+            </div>
+        </section>
+
+        <section class="landing-section feature-section" id="features">
+            <div class="feature-showcase reveal-on-scroll">
+                <div class="showcase-orb" aria-hidden="true">🌤️</div>
+                <div class="showcase-mini-card">
+                    <span>YOUR FARM OUTLOOK</span>
+                    <strong>One clear view.</strong>
+                    <small>Weather · Alerts · Crops</small>
+                </div>
+                <div class="showcase-leaf leaf-a" aria-hidden="true">🌿</div>
+                <div class="showcase-leaf leaf-b" aria-hidden="true">🌱</div>
+            </div>
+            <div class="feature-copy reveal-on-scroll">
+                <span class="section-eyebrow">BUILT AROUND YOUR FARM</span>
+                <h2>More than a forecast.<br><span>Useful farm context.</span></h2>
+                <p>
+                    A forecast means more when it is connected to your location,
+                    soil and the work happening on your farm.
+                </p>
+                <ul class="feature-list">
+                    <li><span>✓</span><div><strong>Weather in one glance</strong><small>Temperature, humidity, rainfall and wind speed.</small></div></li>
+                    <li><span>✓</span><div><strong>Alerts when conditions change</strong><small>In-page emoji alerts, with optional browser notifications.</small></div></li>
+                    <li><span>✓</span><div><strong>Soil-aware crop shortlist</strong><small>Suggestions include temperature fit and practical cautions.</small></div></li>
+                    <li><span>✓</span><div><strong>Farm details close at hand</strong><small>Your profile, location and registered crops stay in your dashboard.</small></div></li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="landing-alert-band reveal-on-scroll">
+            <span class="alert-band-icon">🔔</span>
+            <div>
+                <span class="section-eyebrow">A LITTLE MORE NOTICE</span>
+                <h2>Weather changes. Your plans can adapt.</h2>
+                <p>See rain, high-wind, high-humidity and high-temperature alerts as conditions are refreshed.</p>
+            </div>
+            <div class="alert-band-examples">
+                <span>🌧️ Rain</span><span>💨 Wind</span><span>🌡️ Heat</span>
+            </div>
+        </section>
+
+        <section class="landing-bottom-cta reveal-on-scroll">
+            <span class="section-eyebrow">START WITH YOUR FARM</span>
+            <h2>A clearer view of what's ahead.</h2>
+            <p>Create a farm profile to see local weather, alerts and soil-aware crop suggestions in one dashboard.</p>
+            {% if session.get('user_id') %}
+            <a class="landing-primary-cta" href="{{ url_for('dashboard') }}">
+                Open my dashboard <span aria-hidden="true">→</span>
+            </a>
+            {% else %}
+            <a class="landing-primary-cta" href="{{ url_for('register') }}">
+                Create account <span aria-hidden="true">→</span>
+            </a>
+            {% endif %}
+        </section>
+    </main>
+
+    <footer class="landing-footer">
+        <a class="site-brand" href="{{ url_for('home') }}">🌱 AgriWeather</a>
+        <p>Weather information supports planning and is not an official emergency warning.</p>
+        <a href="#how-it-works">How it works ↑</a>
+    </footer>
+
+    <script>
+        const revealItems = document.querySelectorAll(".reveal-on-scroll");
+        if ("IntersectionObserver" in window) {
+            const revealObserver = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add("is-visible");
+                        revealObserver.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.12 });
+            revealItems.forEach(item => revealObserver.observe(item));
+        } else {
+            revealItems.forEach(item => item.classList.add("is-visible"));
+        }
+    </script>
+</body>
+</html>

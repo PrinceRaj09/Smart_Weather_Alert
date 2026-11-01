@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Registered Farmers</title>
+    <meta name="theme-color" content="#103c2c">
+    <link rel="icon" type="image/svg+xml"
+          href="{{ url_for('static', filename='agriweather-icon.svg') }}">
+    <title>AgriWeather | Admin - Registered Farmers</title>
 
     <style>
         * {
@@ -112,9 +115,11 @@
             text-align: center;
         }
     </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='3d-theme.css') }}">
 </head>
 
-<body>
+<body class="admin-theme">
+{% include "_auth_popup.html" %}
 <div class="container">
 
     <div class="header">
@@ -159,6 +164,7 @@
                     <th>Village</th>
                     <th>PIN Code</th>
                     <th>Farming Type</th>
+                    <th>Soil Type</th>
                     <th>Farm Size</th>
                     <th>Crops</th>
                     <th>Latitude</th>
@@ -180,6 +186,7 @@
                     <td>{{ farmer.village or '-' }}</td>
                     <td>{{ farmer.pin_code or '-' }}</td>
                     <td>{{ farmer.farming_type or '-' }}</td>
+                    <td>{{ farmer.soil_type or '-' }}</td>
                     <td>{{ farmer.farm_size if farmer.farm_size is not none else '-' }}</td>
                     <td>{{ farmer.crops or '-' }}</td>
                     <td>{{ farmer.latitude if farmer.latitude is not none else '-' }}</td>
@@ -199,7 +206,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="15" class="empty">
+                    <td colspan="16" class="empty">
                         No registered farmers found.
                     </td>
                 </tr>

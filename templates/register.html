@@ -4,7 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Farmer Registration | Smart Agriculture</title>
+    <meta name="theme-color" content="#103c2c">
+    <link rel="icon" type="image/svg+xml"
+          href="{{ url_for('static', filename='agriweather-icon.svg') }}">
+    <title>Create Account | AgriWeather</title>
 
     <style>
         * { box-sizing: border-box; }
@@ -382,9 +385,11 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='3d-theme.css') }}">
 </head>
 
 <body>
+{% include "_auth_popup.html" %}
 <section class="welcome-screen" id="welcomeScreen"
          aria-label="Welcome to AgriWeather" role="status">
     <div class="welcome-content">
@@ -418,15 +423,32 @@
         <div class="feature">🌾 Better crop planning</div>
     </section>
 
-    <section class="card">
-        <h2>🌿 Farmer Registration</h2>
+    <section class="card registration-card">
+        <div class="registration-card-heading">
+            <div>
+                <span class="registration-kicker">YOUR FARM, YOUR FORECAST</span>
+                <h2>🌿 Create your farm account</h2>
+            </div>
+        </div>
         <p class="description">
-            Complete the required fields to create your farmer account.
+            Complete four short steps to set up your personalized farm dashboard.
         </p>
 
         <form id="registerForm">
-            <div class="grid">
+            <div class="registration-stepper" aria-label="Account setup progress">
+                <div class="stepper-track"><span id="stepperProgress"></span></div>
+                <ol>
+                    <li class="active" data-step-indicator="0"><span>1</span><small>Account</small></li>
+                    <li data-step-indicator="1"><span>2</span><small>Address</small></li>
+                    <li data-step-indicator="2"><span>3</span><small>Farm</small></li>
+                    <li data-step-indicator="3"><span>4</span><small>Location</small></li>
+                </ol>
+            </div>
+            <p class="step-count" id="stepCount" aria-live="polite">Step 1 of 4 · Account details</p>
 
+            <section class="registration-step" data-registration-step="0"
+                     aria-labelledby="accountStepTitle">
+                <div class="grid">
                 <h3 class="section-title">Personal & Login Details</h3>
 
                 <div class="field">
@@ -462,8 +484,13 @@
                            type="password" minlength="8"
                            autocomplete="new-password" required>
                 </div>
+                </div>
+            </section>
 
-                <h3 class="section-title">Full Address</h3>
+            <section class="registration-step" data-registration-step="1"
+                     aria-labelledby="addressStepTitle" hidden>
+                <div class="grid">
+                <h3 class="section-title" id="addressStepTitle">Full Address</h3>
 
                 <div class="field">
                     <label for="state">State <span class="required">*</span></label>
@@ -486,8 +513,13 @@
                            pattern="[0-9]{6}" maxlength="6"
                            inputmode="numeric" placeholder="6-digit PIN" required>
                 </div>
+                </div>
+            </section>
 
-                <h3 class="section-title">Farming Details</h3>
+            <section class="registration-step" data-registration-step="2"
+                     aria-labelledby="farmStepTitle" hidden>
+                <div class="grid">
+                <h3 class="section-title" id="farmStepTitle">Farming Details</h3>
 
                 <div class="field">
                     <label for="farming_type">Farming Type <span class="required">*</span></label>
@@ -513,8 +545,23 @@
                     <input id="crops" name="crops" type="text"
                            placeholder="Wheat, rice, potato..." required>
                 </div>
+                <div class="field full">
+                    <label for="soil_type">Soil Type <span class="required">*</span></label>
+                    <select id="soil_type" name="soil_type" required>
+                        <option value="">Select your farm's soil type</option>
+                        {% for soil in soil_types %}
+                        <option value="{{ soil }}">{{ soil }} soil</option>
+                        {% endfor %}
+                    </select>
+                    <small class="field-hint">Helps us shortlist crops suited to your soil and current weather.</small>
+                </div>
+                </div>
+            </section>
 
-                <h3 class="section-title">Farm GPS Location</h3>
+            <section class="registration-step" data-registration-step="3"
+                     aria-labelledby="locationStepTitle" hidden>
+                <div class="grid">
+                <h3 class="section-title" id="locationStepTitle">Farm GPS Location</h3>
 
                 <div class="field full">
                     <div class="gps-box">
@@ -529,23 +576,29 @@
                             GPS location is required.
                         </span>
 
-                        <input type="hidden" id="latitude" name="latitude" required>
-                        <input type="hidden" id="longitude" name="longitude" required>
+                        <input type="hidden" id="latitude" name="latitude">
+                        <input type="hidden" id="longitude" name="longitude">
                     </div>
                 </div>
-            </div>
+                </div>
+            </section>
 
-            <button class="submit" id="submitButton" type="submit">
-                Create Farmer Account →
-            </button>
+            <div class="wizard-controls">
+                <button class="wizard-back" id="previousStep" type="button" hidden>
+                    ← Back
+                </button>
+                <button class="submit wizard-next" id="nextStep" type="button">
+                    Continue →
+                </button>
+                <button class="submit wizard-finish" id="submitButton"
+                        type="submit" hidden>
+                    Create Farmer Account →
+                </button>
+            </div>
 
             <p id="message" role="status" aria-live="polite"></p>
             <div id="userIdResult" hidden></div>
 
-            <p class="login-note">
-                Already registered?
-                <a href="/login">Login here</a>
-            </p>
         </form>
     </section>
 </main>
@@ -558,14 +611,83 @@
         welcomeScreen.classList.add("is-leaving");
         registrationPage.classList.add("is-visible");
         welcomeScreen.setAttribute("aria-hidden", "true");
-    }, 4000);
+    }, 650);
 
     const form = document.getElementById("registerForm");
     const message = document.getElementById("message");
     const submitButton = document.getElementById("submitButton");
+    const nextStepButton = document.getElementById("nextStep");
+    const previousStepButton = document.getElementById("previousStep");
+    const registrationSteps = Array.from(
+        document.querySelectorAll("[data-registration-step]")
+    );
+    const stepLabels = [
+        "Account details",
+        "Farm address",
+        "Farm details",
+        "Farm location"
+    ];
+    let activeStep = 0;
     const gpsStatus = document.getElementById("gpsStatus");
     const userIdResult = document.getElementById("userIdResult");
     let gpsDetected = false;
+
+    function showStep(index) {
+        activeStep = index;
+        registrationSteps.forEach((step, stepIndex) => {
+            step.hidden = stepIndex !== activeStep;
+        });
+        document.querySelectorAll("[data-step-indicator]").forEach(
+            (indicator, stepIndex) => {
+                indicator.classList.toggle("active", stepIndex === activeStep);
+                indicator.classList.toggle("complete", stepIndex < activeStep);
+            }
+        );
+        document.getElementById("stepperProgress").style.width =
+            `${(activeStep / (registrationSteps.length - 1)) * 100}%`;
+        document.getElementById("stepCount").textContent =
+            `Step ${activeStep + 1} of ${registrationSteps.length} · ` +
+            stepLabels[activeStep];
+        previousStepButton.hidden = activeStep === 0;
+        nextStepButton.hidden = activeStep === registrationSteps.length - 1;
+        submitButton.hidden = activeStep !== registrationSteps.length - 1;
+        message.textContent = "";
+        message.className = "";
+    }
+
+    function validateStep(index) {
+        const fields = registrationSteps[index].querySelectorAll(
+            "input:not([type='hidden']), select"
+        );
+        const invalidField = Array.from(fields).find(
+            field => !field.checkValidity()
+        );
+        if (invalidField) {
+            invalidField.reportValidity();
+            invalidField.focus();
+            return false;
+        }
+
+        if (
+            index === 0 &&
+            document.getElementById("password").value !==
+                document.getElementById("confirm_password").value
+        ) {
+            message.textContent = "Passwords do not match.";
+            message.className = "error";
+            document.getElementById("confirm_password").focus();
+            return false;
+        }
+        return true;
+    }
+
+    nextStepButton.addEventListener("click", () => {
+        if (validateStep(activeStep)) showStep(activeStep + 1);
+    });
+    previousStepButton.addEventListener("click", () => {
+        showStep(Math.max(0, activeStep - 1));
+    });
+    showStep(0);
 
     document.getElementById("detectLocation").addEventListener("click", () => {
         if (!navigator.geolocation) {
@@ -607,9 +729,11 @@
         message.className = "";
         userIdResult.hidden = true;
 
-        if (!form.checkValidity()) {
-            form.reportValidity();
-            return;
+        for (let index = 0; index < registrationSteps.length; index++) {
+            showStep(index);
+            if (!validateStep(index)) {
+                return;
+            }
         }
 
         if (!gpsDetected ||
@@ -668,10 +792,13 @@
             userIdResult.innerHTML = `
                 <strong>Your unique Farmer User ID:</strong>
                 <div class="user-id"></div>
-                <p>Please save this ID. You can use it to log in.</p>
-                <a href="/login">Go to Login →</a>
+                <p>Please save this ID. Your dashboard is ready.</p>
+                <a href="/dashboard">Open dashboard now →</a>
             `;
             userIdResult.querySelector(".user-id").textContent = result.user_id;
+            window.setTimeout(() => {
+                window.location.assign(result.redirect || "/dashboard");
+            }, 1800);
 
             form.reset();
             gpsDetected = false;

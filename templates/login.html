@@ -4,7 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Farmer Login</title>
+    <meta name="theme-color" content="#103c2c">
+    <link rel="icon" type="image/svg+xml"
+          href="{{ url_for('static', filename='agriweather-icon.svg') }}">
+    <title>AgriWeather | Farmer Login</title>
 
     <style>
         * { box-sizing: border-box; }
@@ -134,9 +137,11 @@
 
         a { color: #287a3e; }
     </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='3d-theme.css') }}">
 </head>
 
 <body>
+    {% include "_auth_popup.html" %}
     <div class="login-box">
         <h2>🌾 Farmer Login</h2>
         <p class="subtitle">Smart Agriculture Weather Alert</p>
@@ -237,8 +242,8 @@
         </section>
 
         <div class="register-link">
-            New farmer?
-            <a href="{{ url_for('register') }}">Register here</a>
+            Need an account?
+            <a href="{{ url_for('register') }}">Create account</a>
         </div>
     </div>
 
@@ -279,6 +284,10 @@
         const verifyResetForm = document.getElementById("verifyResetForm");
         const createPasswordForm = document.getElementById("createPasswordForm");
         const resetMessage = document.getElementById("resetMessage");
+
+        if (window.location.hash === "#forgot-password") {
+            resetPanel.hidden = false;
+        }
 
         document.getElementById("forgotPasswordLink").addEventListener(
             "click",

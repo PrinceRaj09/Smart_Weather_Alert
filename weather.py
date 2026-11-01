@@ -67,7 +67,7 @@ def analyze_weather(weather):
     return alerts
 
 
-def analyze_forecast(hourly):
+def analyze_forecast(hourly, current_time=None):
     """Check forecast data for rain and strong winds."""
     alerts = []
 
@@ -76,6 +76,13 @@ def analyze_forecast(hourly):
     wind_values = hourly.get("wind_speed_10m", [])
 
     for index, time in enumerate(times):
+        if (
+            isinstance(current_time, str)
+            and isinstance(time, str)
+            and time < current_time
+        ):
+            continue
+
         rain = (
             rain_values[index]
             if index < len(rain_values)
@@ -148,8 +155,10 @@ def get_weather(latitude, longitude):
             "hourly": [
                 "precipitation",
                 "wind_speed_10m",
-                "temperature_2m"
+                "temperature_2m",
+                "relative_humidity_2m"
             ],
+            "past_hours": 1,
             "forecast_hours": 24,
             "timezone": "auto"
         }
@@ -183,7 +192,47 @@ def get_weather(latitude, longitude):
             "temperature_2m": hourly.get("temperature_2m", [])
         }
 
-        weather["forecast_alerts"] = analyze_forecast(hourly)
+        current_time = current.get("time")
+        hourly_times = hourly.get("time", [])
+        if isinstance(current_time, str) and isinstance(hourly_times, list):
+            previous_indices = [
+                index for index, value in enumerate(hourly_times)
+                if isinstance(value, str) and value < current_time
+            ]
+            if previous_indices:
+                index = previous_indices[-1]
+                weather["previous_hour"] = {
+                    "time": hourly_times[index],
+                    "temperature_2m": (
+                        hourly.get("temperature_2m", [])[index]
+                        if index < len(hourly.get("temperature_2m", []))
+                        else None
+                    ),
+                    "relative_humidity_2m": (
+                        hourly.get("relative_humidity_2m", [])[index]
+                        if index < len(hourly.get("relative_humidity_2m", []))
+                        else None
+                    ),
+                    "precipitation": (
+                        hourly.get("precipitation", [])[index]
+                        if index < len(hourly.get("precipitation", []))
+                        else None
+                    ),
+                    "wind_speed_10m": (
+                        hourly.get("wind_speed_10m", [])[index]
+                        if index < len(hourly.get("wind_speed_10m", []))
+                        else None
+                    )
+                }
+            else:
+                weather["previous_hour"] = None
+        else:
+            weather["previous_hour"] = None
+
+        weather["forecast_alerts"] = analyze_forecast(
+            hourly,
+            current_time
+        )
 
         return weather
 

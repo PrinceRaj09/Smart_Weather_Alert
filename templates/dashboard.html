@@ -4,7 +4,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#103c2c">
+<meta name="description" content="Live farm weather, hourly forecasts, alerts and crop suggestions from AgriWeather.">
 <title>AgriWeather | Farmer Dashboard</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='agriweather-icon.svg') }}">
 
 <style>
 :root {
@@ -132,15 +135,13 @@ h1 {
 }
 
 .user-chip {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 30px;
-    padding: 8px 13px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
     color: var(--text);
-    text-align: left;
 }
 
 .account-menu {
@@ -164,7 +165,9 @@ h1 {
     z-index: 5;
     top: calc(100% + 10px);
     right: 0;
-    width: min(340px, calc(100vw - 28px));
+    width: min(390px, calc(100vw - 28px));
+    max-height: min(78vh, 680px);
+    overflow-y: auto;
     padding: 16px;
     border: 1px solid var(--border);
     border-radius: 16px;
@@ -247,17 +250,95 @@ h1 {
     font-size: 11px;
 }
 
+.account-panel-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.account-edit-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+}
+
+.account-edit-field {
+    display: grid;
+    min-width: 0;
+    gap: 4px;
+}
+
+.account-edit-field.wide {
+    grid-column: 1 / -1;
+}
+
+.account-edit-field label {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.account-edit-field input,
+.account-edit-field select {
+    width: 100%;
+    min-width: 0;
+    padding: 9px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    color: var(--text);
+    background: #fbfdfb;
+    font: inherit;
+    font-size: 12px;
+}
+
+.account-edit-field input:focus,
+.account-edit-field select:focus {
+    outline: 3px solid #176b4520;
+    border-color: #70a981;
+}
+
+.account-edit-status {
+    min-height: 16px;
+    margin: 8px 0;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.account-menu-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+.account-logout {
+    color: #a63232;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 750;
+    align-self: center;
+}
+
 .avatar {
     position: relative;
     overflow: hidden;
     background: #dcefe1;
-    color: var(--green);
-    width: 37px;
-    height: 37px;
+    color: #176b45;
+    width: 48px;
+    height: 48px;
     display: grid;
     place-items: center;
     border-radius: 50%;
-    font-weight: bold;
+    border: 2px solid #fff;
+    box-shadow: 0 7px 17px rgba(13, 54, 35, .22);
+    transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.avatar svg {
+    width: 23px;
+    height: 23px;
 }
 
 .avatar img {
@@ -266,6 +347,12 @@ h1 {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.account-menu-trigger:hover .avatar,
+.account-menu-trigger[aria-expanded="true"] .avatar {
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 11px 22px rgba(13, 54, 35, .28);
 }
 
 .user-chip small {
@@ -578,7 +665,7 @@ h1 {
 }
 
 @media(max-width:650px) {
-    .layout { grid-template-columns: 1fr; }
+    .layout { grid-template-columns: minmax(0, 1fr); }
     .sidebar { padding: 13px; gap: 13px; }
     .nav-label, .sidebar-note { display: none; }
     .nav { display: flex; overflow-x: auto; }
@@ -588,15 +675,23 @@ h1 {
     .hero { padding: 20px; align-items: flex-start; }
     .hero-weather { min-width: 100px; padding: 12px 7px; }
     .hero-weather strong { font-size: 23px; }
+    .account-menu-panel { right: -2px; }
     .metrics { gap: 9px; }
     .metric { padding: 12px; }
     .metric strong { font-size: 21px; }
     .card { padding: 15px; }
 }
+
+@media(max-width:420px) {
+    .account-edit-grid { grid-template-columns: 1fr; }
+    .account-edit-field.wide { grid-column: auto; }
+}
 </style>
+<link rel="stylesheet" href="{{ url_for('static', filename='3d-theme.css', v='10') }}">
 </head>
 
-<body>
+<body class="dashboard-page">
+{% include "_auth_popup.html" %}
 <div class="layout">
 
 <aside class="sidebar">
@@ -611,10 +706,26 @@ h1 {
     <div>
         <div class="nav-label">WORKSPACE</div>
         <nav class="nav">
-            <a class="active" href="#overview">⌂ Overview</a>
-            <a href="#weather-section">☀ Weather</a>
-            <a href="#alerts-section">⚑ Alerts</a>
-            <a href="#farm-section">♧ Farm profile</a>
+            <a class="active" href="#overview" aria-label="Overview">
+                <span class="nav-icon" aria-hidden="true">⌂</span>
+                <span class="nav-text">Overview</span>
+            </a>
+            <a href="#weather-section" aria-label="Weather">
+                <span class="nav-icon" aria-hidden="true">☀</span>
+                <span class="nav-text">Weather</span>
+            </a>
+            <a href="#alerts-section" aria-label="Alerts">
+                <span class="nav-icon" aria-hidden="true">⚑</span>
+                <span class="nav-text">Alerts</span>
+            </a>
+            <a href="#crop-advice-section" aria-label="Crop advice">
+                <span class="nav-icon" aria-hidden="true">🌱</span>
+                <span class="nav-text">Crops</span>
+            </a>
+            <a href="#farm-section" aria-label="Farm profile">
+                <span class="nav-icon" aria-hidden="true">♧</span>
+                <span class="nav-text">My farm</span>
+            </a>
         </nav>
     </div>
 
@@ -635,19 +746,23 @@ h1 {
     <div class="account-menu">
         <button class="user-chip account-menu-trigger" id="account-menu-trigger"
                 type="button" aria-expanded="false"
-                aria-controls="account-menu-panel" aria-label="Open farmer account information">
-            <span class="avatar" id="avatar">F</span>
-            <span>
-                <strong id="farmer-name">Farmer</strong>
-                <small id="farmer-id">Your farm at a glance</small>
+                aria-controls="account-menu-panel" aria-label="Open profile and account settings">
+            <span class="avatar" id="avatar">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="12" cy="8" r="4" fill="currentColor"></circle>
+                    <path d="M4 21c.7-4.1 3.5-6.2 8-6.2s7.3 2.1 8 6.2" fill="currentColor"></path>
+                </svg>
             </span>
-            <span class="account-menu-caret" aria-hidden="true">▾</span>
         </button>
         <section class="account-menu-panel" id="account-menu-panel"
                  aria-labelledby="account-menu-title" hidden>
             <h2 id="account-menu-title">Farmer information</h2>
-            <p>Your account and registered farm details</p>
-            <div class="account-info">
+            <p>Your account, farm details and settings</p>
+            <div class="account-panel-actions">
+                <button class="btn" id="edit-profile-btn" type="button">Edit details</button>
+                <button class="btn" id="cancel-profile-edit" type="button" hidden>Cancel edit</button>
+            </div>
+            <div class="account-info" id="account-info">
                 <div class="account-info-item"><small>Full name</small><strong id="account-name">Loading…</strong></div>
                 <div class="account-info-item"><small>Farmer ID</small><strong id="account-id">Loading…</strong></div>
                 <div class="account-info-item"><small>Mobile</small><strong id="account-phone">Loading…</strong></div>
@@ -656,9 +771,36 @@ h1 {
                 <div class="account-info-item"><small>District / State</small><strong id="account-location">Loading…</strong></div>
                 <div class="account-info-item"><small>PIN code</small><strong id="account-pin">Loading…</strong></div>
                 <div class="account-info-item"><small>Farming type</small><strong id="account-farm-type">Loading…</strong></div>
+                <div class="account-info-item"><small>Soil type</small><strong id="account-soil-type">Loading…</strong></div>
                 <div class="account-info-item"><small>Farm size</small><strong id="account-farm-size">Loading…</strong></div>
                 <div class="account-info-item"><small>Main crops</small><strong id="account-crops">Loading…</strong></div>
+                <div class="account-info-item"><small>GPS coordinates</small><strong id="account-coordinates">Loading…</strong></div>
             </div>
+            <p class="account-edit-status" id="account-edit-status" role="status" aria-live="polite"></p>
+            <form id="account-edit-form" hidden>
+                <div class="account-edit-grid">
+                    <div class="account-edit-field"><label for="edit-full-name">Full name</label><input id="edit-full-name" name="full_name" maxlength="100" required></div>
+                    <div class="account-edit-field"><label for="edit-phone">Mobile</label><input id="edit-phone" name="phone" inputmode="numeric" pattern="[6-9][0-9]{9}" maxlength="10" required></div>
+                    <div class="account-edit-field wide"><label for="edit-email">Email</label><input id="edit-email" name="email" type="email" maxlength="254" required></div>
+                    <div class="account-edit-field"><label for="edit-village">Village</label><input id="edit-village" name="village" maxlength="100" required></div>
+                    <div class="account-edit-field"><label for="edit-district">District</label><input id="edit-district" name="district" maxlength="100" required></div>
+                    <div class="account-edit-field"><label for="edit-state">State</label><input id="edit-state" name="state" maxlength="100" required></div>
+                    <div class="account-edit-field"><label for="edit-pin">PIN code</label><input id="edit-pin" name="pin_code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></div>
+                    <div class="account-edit-field"><label for="edit-farming-type">Farming type</label><input id="edit-farming-type" name="farming_type" maxlength="100" required></div>
+                    <div class="account-edit-field"><label for="edit-farm-size">Farm size (acres)</label><input id="edit-farm-size" name="farm_size" type="number" min="0.01" step="any" required></div>
+                    <div class="account-edit-field"><label for="edit-soil-type">Soil type</label>
+                        <select id="edit-soil-type" name="soil_type" required>
+                            {% for soil in soil_types %}
+                            <option value="{{ soil }}">{{ soil }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="account-edit-field wide"><label for="edit-crops">Main crops</label><input id="edit-crops" name="crops" maxlength="500" required></div>
+                    <div class="account-edit-field"><label for="edit-latitude">Latitude</label><input id="edit-latitude" name="latitude" type="number" min="-90" max="90" step="any"></div>
+                    <div class="account-edit-field"><label for="edit-longitude">Longitude</label><input id="edit-longitude" name="longitude" type="number" min="-180" max="180" step="any"></div>
+                </div>
+                <button class="btn primary" id="save-profile-details" type="submit">Save changes</button>
+            </form>
             <div class="account-picture-controls">
                 <input id="profile-picture-input" type="file"
                        accept="image/jpeg,image/png,image/webp"
@@ -671,11 +813,16 @@ h1 {
                     JPG, PNG, or WEBP; maximum 5 MB.
                 </span>
             </div>
+            <div class="account-menu-footer">
+                <span>Signed in as <strong id="farmer-name">Farmer</strong> · <span id="farmer-id">ID</span></span>
+                <a class="account-logout" href="{{ url_for('logout') }}">Log out</a>
+            </div>
         </section>
     </div>
 </header>
 
-<section class="hero" id="overview">
+<section class="dashboard-view" id="overview" data-dashboard-view="overview">
+<section class="hero">
     <div class="hero-copy">
         <span class="pill">● LIVE WEATHER MONITOR</span>
         <h2>Good farming starts with good forecasts.</h2>
@@ -691,20 +838,77 @@ h1 {
         <small id="hero-condition">Waiting for weather</small>
     </div>
 </section>
+<section class="overview-snapshot" aria-label="Live farm weather snapshot">
+    <div class="overview-snapshot-heading">
+        <div>
+            <span class="overview-kicker">YOUR FARM RIGHT NOW</span>
+            <h2>Live conditions</h2>
+        </div>
+        <span class="overview-live"><span></span> LIVE</span>
+    </div>
+    <div class="metrics overview-metrics">
+        <article class="metric">
+            <div class="metric-top">
+                <label>Temperature</label><span class="metric-icon" aria-hidden="true">🌡️</span>
+            </div>
+            <strong id="overview-temp">— °C</strong>
+            <small>Outside now</small>
+        </article>
+        <article class="metric">
+            <div class="metric-top">
+                <label>Humidity</label><span class="metric-icon" aria-hidden="true">💧</span>
+            </div>
+            <strong id="overview-humidity">—%</strong>
+            <small>Air moisture</small>
+        </article>
+        <article class="metric">
+            <div class="metric-top">
+                <label>Rainfall</label><span class="metric-icon" aria-hidden="true">🌧️</span>
+            </div>
+            <strong id="overview-rain">— mm</strong>
+            <small>Current rain</small>
+        </article>
+        <article class="metric">
+            <div class="metric-top">
+                <label>Wind</label><span class="metric-icon" aria-hidden="true">🍃</span>
+            </div>
+            <strong id="overview-wind">— km/h</strong>
+            <small>Near your farm</small>
+        </article>
+    </div>
+    <div class="overview-foot">
+        <span><span class="overview-foot-icon" aria-hidden="true">📍</span><strong id="overview-location">Finding your farm…</strong></span>
+        <span><span class="overview-foot-icon" aria-hidden="true">⟳</span><span id="overview-updated">Waiting for latest update</span></span>
+        <a href="#weather-section" data-dashboard-link="weather-section">Full forecast <span aria-hidden="true">→</span></a>
+    </div>
+</section>
+<div class="overview-quick-links" aria-label="More dashboard information">
+    <a class="overview-quick-link" href="#alerts-section" data-dashboard-link="alerts-section">
+        <span aria-hidden="true">🔔</span><span><strong>Weather alerts</strong><small id="overview-alert-summary">Checking local conditions…</small></span><span class="overview-link-arrow" aria-hidden="true">→</span>
+    </a>
+    <a class="overview-quick-link" href="#crop-advice-section" data-dashboard-link="crop-advice-section">
+        <span aria-hidden="true">🌱</span><span><strong>Crop suggestions</strong><small>Advice for your soil and weather</small></span><span class="overview-link-arrow" aria-hidden="true">→</span>
+    </a>
+</div>
+</section>
 
+<section class="dashboard-view" id="weather-section"
+         data-dashboard-view="weather" hidden>
 <div class="toolbar">
     <button class="btn primary" id="refresh-btn">↻ Refresh weather</button>
     <button class="btn" id="registered-btn">⌖ Registered farm</button>
     <button class="btn" id="detect-btn">◎ Use current GPS</button>
-    <button class="btn" id="notifications-btn" type="button">Enable weather notifications</button>
-    <a class="btn" href="/logout">Log out</a>
+    <button class="btn" id="notifications-btn" type="button"
+            title="Hourly updates are delivered while this dashboard is open.">
+        Enable hourly weather notifications
+    </button>
 </div>
 
 <div id="weather-status" class="status" role="status">
     Loading your farm profile and weather…
 </div>
 
-<section id="weather-section">
+<section>
     <div class="section-title">
         <h2>Current conditions</h2>
         <p>Latest readings for the selected location</p>
@@ -745,13 +949,27 @@ h1 {
     </div>
 </section>
 
-<div class="content-grid">
+<section class="card forecast-card" style="margin-top:17px">
+    <div class="card-head">
+        <div>
+            <h2>Hourly forecast</h2>
+            <p>Upcoming hours returned by the weather service</p>
+        </div>
+        <span>◷</span>
+    </div>
+    <div id="forecast-list" class="forecast">
+        <div class="empty">Hourly forecast will appear here.</div>
+    </div>
+</section>
+</section>
 
-<section class="card" id="alerts-section">
+<section class="dashboard-view" id="alerts-section"
+         data-dashboard-view="alerts" hidden>
+<section class="card">
     <div class="card-head">
         <div>
             <h2>Weather alerts</h2>
-            <p>Conditions that may need your attention</p>
+            <p>Current conditions and a summary from the previous hour</p>
         </div>
         <button class="btn" id="alerts-refresh">Refresh</button>
     </div>
@@ -759,8 +977,11 @@ h1 {
         <div class="empty">Loading alerts…</div>
     </div>
 </section>
+</section>
 
-<section class="card" id="farm-section">
+<section class="dashboard-view" id="farm-section"
+         data-dashboard-view="farm" hidden>
+<section class="card">
     <div class="card-head">
         <div>
             <h2>My farm profile</h2>
@@ -775,6 +996,7 @@ h1 {
         <div class="profile-item"><small>State</small><strong id="state">Loading…</strong></div>
         <div class="profile-item"><small>PIN code</small><strong id="pin">Loading…</strong></div>
         <div class="profile-item"><small>Farming type</small><strong id="farm-type">Loading…</strong></div>
+        <div class="profile-item"><small>Soil type</small><strong id="soil-type">Loading…</strong></div>
         <div class="profile-item"><small>Farm size</small><strong id="farm-size">Loading…</strong></div>
         <div class="profile-item" style="grid-column:1/-1">
             <small>Saved GPS coordinates</small><strong id="coords">Loading…</strong>
@@ -786,20 +1008,53 @@ h1 {
         <span class="empty">Loading crops…</span>
     </div>
 </section>
-</div>
+</section>
 
-<section class="card" style="margin-top:17px">
+<section class="dashboard-view" id="crop-advice-section"
+         data-dashboard-view="crops" hidden>
+<section class="card">
     <div class="card-head">
         <div>
-            <h2>Hourly forecast</h2>
-            <p>Upcoming hours returned by the weather service</p>
+            <h2>🌱 Crop suggestions for your farm</h2>
+            <p>Shortlist based on your soil type and current local temperature</p>
         </div>
-        <span>◷</span>
+        <span class="crop-advice-badge">PERSONALIZED</span>
     </div>
-    <div id="forecast-list" class="forecast">
-        <div class="empty">Hourly forecast will appear here.</div>
+    <div class="crop-advice-meta" id="crop-advice-meta">
+        Waiting for your farm profile and local weather…
     </div>
+    <form class="soil-preference-form" id="soilPreferenceForm">
+        <label for="soilPreference">Your soil type</label>
+        <select id="soilPreference" name="soil_type" required>
+            <option value="">Select soil type</option>
+            {% for soil in soil_types %}
+            <option value="{{ soil }}">{{ soil }} soil</option>
+            {% endfor %}
+        </select>
+        <button class="btn primary" type="submit">Save soil type</button>
+        <span id="soilPreferenceStatus" role="status" aria-live="polite"></span>
+    </form>
+    <div class="crop-suggestion-grid" id="crop-suggestions">
+        <div class="empty">Crop suggestions will appear when weather loads.</div>
+    </div>
+    <div class="crop-cautions" id="crop-cautions" hidden></div>
+    <p class="crop-advice-note" id="crop-advice-note">
+        Recommendations are a planning aid. Confirm local sowing season,
+        soil test results and irrigation with an agriculture expert.
+    </p>
 </section>
+</section>
+
+<div class="weather-toast" id="weather-toast" role="status"
+     aria-live="assertive" hidden>
+    <span class="weather-toast-icon" id="weather-toast-icon">⚠️</span>
+    <span>
+        <strong id="weather-toast-title"></strong>
+        <span id="weather-toast-message"></span>
+    </span>
+    <button type="button" id="weather-toast-close"
+            aria-label="Dismiss weather alert">×</button>
+</div>
 
 <p class="footer">
     AgriWeather · Weather information supports planning and is not an official emergency warning.
@@ -816,6 +1071,9 @@ let activeCoords = null;
 let latestWeatherAlerts = [];
 const notifiedAlertIds = new Set();
 const WEATHER_REFRESH_INTERVAL = 5 * 60 * 1000;
+let weatherToastTimer = null;
+let hourlyWeatherTimer = null;
+let profileDetails = null;
 
 function safeText(value, fallback = "Not provided") {
     return value === null || value === undefined || value === ""
@@ -850,11 +1108,11 @@ async function getJSON(url) {
 async function loadProfile() {
     const data = await getJSON("/api/profile");
     const p = data.profile || data;
+    profileDetails = p;
 
     const name = safeText(p.full_name, "Farmer");
     $("welcome-name").textContent = name;
     $("farmer-name").textContent = name;
-    $("avatar").textContent = name.trim().charAt(0).toUpperCase() || "F";
     $("farmer-id").textContent = safeText(p.user_id, "Registered farmer");
     $("account-name").textContent = name;
     $("account-id").textContent = safeText(p.user_id);
@@ -865,8 +1123,32 @@ async function loadProfile() {
         [p.district, p.state].filter(Boolean).join(", ") || "Not provided";
     $("account-pin").textContent = safeText(p.pin_code);
     $("account-farm-type").textContent = safeText(p.farming_type);
+    $("account-soil-type").textContent = safeText(p.soil_type);
+    $("soilPreference").value = p.soil_type || "";
     $("account-farm-size").textContent = safeText(p.farm_size);
     $("account-crops").textContent = safeText(p.crops);
+    const latitude = p.latitude;
+    const longitude = p.longitude;
+    $("account-coordinates").textContent =
+        latitude !== null && latitude !== "" &&
+        longitude !== null && longitude !== ""
+            ? `${latitude}, ${longitude}`
+            : "Location not saved";
+
+    $("edit-full-name").value = p.full_name || "";
+    $("edit-phone").value = p.phone || "";
+    $("edit-email").value = p.email || "";
+    $("edit-village").value = p.village || "";
+    $("edit-district").value = p.district || "";
+    $("edit-state").value = p.state || "";
+    $("edit-pin").value = p.pin_code || "";
+    $("edit-farming-type").value = p.farming_type || "";
+    $("edit-farm-size").value = p.farm_size ?? "";
+    $("edit-soil-type").value = p.soil_type || "";
+    $("edit-crops").value = p.crops || "";
+    $("edit-latitude").value = latitude ?? "";
+    $("edit-longitude").value = longitude ?? "";
+
     if (p.profile_picture) {
         const profileImage = document.createElement("img");
         profileImage.src = p.profile_picture;
@@ -879,9 +1161,13 @@ async function loadProfile() {
     $("state").textContent = safeText(p.state);
     $("pin").textContent = safeText(p.pin_code);
     $("farm-type").textContent = safeText(p.farming_type);
+    $("soil-type").textContent = safeText(p.soil_type);
     $("farm-size").textContent = safeText(p.farm_size);
 
     $("hero-location").textContent =
+        [p.village, p.district, p.state].filter(Boolean).join(", ")
+        || "Registered farm location";
+    $("overview-location").textContent =
         [p.village, p.district, p.state].filter(Boolean).join(", ")
         || "Registered farm location";
 
@@ -922,6 +1208,76 @@ const profilePictureInput = $("profile-picture-input");
 const profilePictureStatus = $("profile-picture-status");
 const accountMenuTrigger = $("account-menu-trigger");
 const accountMenuPanel = $("account-menu-panel");
+const accountEditForm = $("account-edit-form");
+
+function setProfileEditMode(isEditing) {
+    $("account-info").hidden = isEditing;
+    accountEditForm.hidden = !isEditing;
+    $("edit-profile-btn").hidden = isEditing;
+    $("cancel-profile-edit").hidden = !isEditing;
+    if (isEditing) {
+        $("account-edit-status").textContent = "";
+    }
+    if (isEditing) {
+        $("edit-full-name").focus();
+    }
+}
+
+$("edit-profile-btn").addEventListener("click", () => {
+    setProfileEditMode(true);
+});
+
+$("cancel-profile-edit").addEventListener("click", () => {
+    if (profileDetails) {
+        $("edit-full-name").value = profileDetails.full_name || "";
+        $("edit-phone").value = profileDetails.phone || "";
+        $("edit-email").value = profileDetails.email || "";
+        $("edit-village").value = profileDetails.village || "";
+        $("edit-district").value = profileDetails.district || "";
+        $("edit-state").value = profileDetails.state || "";
+        $("edit-pin").value = profileDetails.pin_code || "";
+        $("edit-farming-type").value = profileDetails.farming_type || "";
+        $("edit-farm-size").value = profileDetails.farm_size ?? "";
+        $("edit-soil-type").value = profileDetails.soil_type || "";
+        $("edit-crops").value = profileDetails.crops || "";
+        $("edit-latitude").value = profileDetails.latitude ?? "";
+        $("edit-longitude").value = profileDetails.longitude ?? "";
+    }
+    setProfileEditMode(false);
+});
+
+accountEditForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    const button = $("save-profile-details");
+    const status = $("account-edit-status");
+    button.disabled = true;
+    status.textContent = "Saving your profile…";
+
+    const formData = new FormData(accountEditForm);
+    const details = Object.fromEntries(formData.entries());
+
+    try {
+        const response = await fetch("/api/profile", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(details)
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || "Could not update your profile.");
+        }
+
+        await loadProfile();
+        setProfileEditMode(false);
+        status.textContent = result.message;
+        await loadWeather(null);
+    } catch (error) {
+        status.textContent = error.message || "Could not update your profile.";
+    } finally {
+        button.disabled = false;
+    }
+});
 
 accountMenuTrigger.addEventListener("click", () => {
     const isExpanded = accountMenuTrigger.getAttribute("aria-expanded") === "true";
@@ -929,20 +1285,23 @@ accountMenuTrigger.addEventListener("click", () => {
     accountMenuPanel.hidden = isExpanded;
 });
 
+function closeAccountMenu() {
+    accountMenuPanel.hidden = true;
+    accountMenuTrigger.setAttribute("aria-expanded", "false");
+}
+
 document.addEventListener("click", event => {
     if (
         event.target instanceof Element &&
         !event.target.closest(".account-menu")
     ) {
-        accountMenuPanel.hidden = true;
-        accountMenuTrigger.setAttribute("aria-expanded", "false");
+        closeAccountMenu();
     }
 });
 
 document.addEventListener("keydown", event => {
     if (event.key === "Escape" && !accountMenuPanel.hidden) {
-        accountMenuPanel.hidden = true;
-        accountMenuTrigger.setAttribute("aria-expanded", "false");
+        closeAccountMenu();
         accountMenuTrigger.focus();
     }
 });
@@ -992,19 +1351,112 @@ $("save-profile-picture").addEventListener("click", async () => {
     }
 });
 
-function renderAlerts(alerts) {
+$("soilPreferenceForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const soilType = $("soilPreference").value;
+    const status = $("soilPreferenceStatus");
+    const button = $("soilPreferenceForm").querySelector("button");
+    button.disabled = true;
+    status.textContent = "Saving soil type…";
+
+    try {
+        const response = await fetch("/api/profile/soil", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ soil_type: soilType })
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || "Could not save soil type.");
+        }
+
+        $("soil-type").textContent = result.soil_type;
+        $("account-soil-type").textContent = result.soil_type;
+        status.textContent = result.message;
+        await loadWeather(activeCoords);
+    } catch (error) {
+        status.textContent = error.message || "Could not save soil type.";
+    } finally {
+        button.disabled = false;
+    }
+});
+
+function formatPreviousHour(previousHour) {
+    if (!previousHour) {
+        return "Previous-hour weather readings are not available yet.";
+    }
+
+    const time = previousHour.time
+        ? new Date(previousHour.time).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit"
+        })
+        : "the previous hour";
+    const readings = [
+        previousHour.temperature_2m !== null &&
+        previousHour.temperature_2m !== undefined
+            ? `${previousHour.temperature_2m}°C`
+            : null,
+        previousHour.relative_humidity_2m !== null &&
+        previousHour.relative_humidity_2m !== undefined
+            ? `${previousHour.relative_humidity_2m}% humidity`
+            : null,
+        previousHour.precipitation !== null &&
+        previousHour.precipitation !== undefined
+            ? `${previousHour.precipitation} mm rain`
+            : null,
+        previousHour.wind_speed_10m !== null &&
+        previousHour.wind_speed_10m !== undefined
+            ? `${previousHour.wind_speed_10m} km/h wind`
+            : null
+    ].filter(Boolean);
+
+    return `At ${time}: ${readings.join(" · ") || "No readings returned."}`;
+}
+
+function renderAlerts(alerts, previousHour) {
     const box = $("alerts-list");
     box.replaceChildren();
+    const activeAlerts = Array.isArray(alerts)
+        ? alerts.filter(alert =>
+            ["warning", "danger"].includes(
+                String(alert.level || "").toLowerCase()
+            )
+        ).length
+        : 0;
+    $("overview-alert-summary").textContent = activeAlerts
+        ? `${activeAlerts} active weather ${activeAlerts === 1 ? "alert" : "alerts"} · previous-hour summary`
+        : "No active alerts · previous-hour summary ready";
+
+    const hourlyItem = document.createElement("article");
+    hourlyItem.className = "alert hourly-update";
+    const hourlyIcon = document.createElement("div");
+    hourlyIcon.className = "alert-icon";
+    hourlyIcon.textContent = "🕐";
+    const hourlyContent = document.createElement("div");
+    const hourlyTitle = document.createElement("h3");
+    hourlyTitle.textContent = "Previous-hour weather";
+    const hourlyMessage = document.createElement("p");
+    hourlyMessage.textContent = formatPreviousHour(previousHour);
+    hourlyContent.append(hourlyTitle, hourlyMessage);
+    hourlyItem.append(hourlyIcon, hourlyContent);
+    box.appendChild(hourlyItem);
 
     if (!Array.isArray(alerts) || alerts.length === 0) {
-        box.innerHTML = `
-            <div class="alert normal">
-                <div class="alert-icon">✓</div>
-                <div>
-                    <h3>No active alerts reported</h3>
-                    <p>Continue monitoring local conditions.</p>
-                </div>
-            </div>`;
+        const item = document.createElement("article");
+        item.className = "alert normal";
+        const icon = document.createElement("div");
+        icon.className = "alert-icon";
+        icon.textContent = "✓";
+        const content = document.createElement("div");
+        const title = document.createElement("h3");
+        title.textContent = "No active alerts reported";
+        const message = document.createElement("p");
+        message.textContent = "Continue monitoring local conditions.";
+        content.append(title, message);
+        item.append(icon, content);
+        box.appendChild(item);
         return;
     }
 
@@ -1043,11 +1495,7 @@ function notifyWeatherAlerts(alerts) {
         )
     );
 
-    if (!("Notification" in window) ||
-        Notification.permission !== "granted") {
-        return;
-    }
-
+    const newAlerts = [];
     latestWeatherAlerts.forEach(alert => {
         const id = [
             alert.type || "current",
@@ -1061,11 +1509,129 @@ function notifyWeatherAlerts(alerts) {
         }
 
         notifiedAlertIds.add(id);
-        new Notification(alert.title || "Weather alert", {
-            body: alert.message || "Review weather conditions for your farm.",
-            tag: id
-        });
+        newAlerts.push(alert);
+
+        if ("Notification" in window &&
+            Notification.permission === "granted") {
+            const icon = String(alert.level || "").toLowerCase() === "danger"
+                ? "🚨"
+                : "⚠️";
+            new Notification(`${icon} ${alert.title || "Weather alert"}`, {
+                body: alert.message || "Review weather conditions for your farm.",
+                tag: id
+            });
+        }
     });
+
+    const urgentAlert = newAlerts.find(
+        alert => String(alert.level || "").toLowerCase() === "danger"
+    );
+    if (urgentAlert || newAlerts[0]) {
+        showWeatherToast(urgentAlert || newAlerts[0]);
+    }
+}
+
+function notifyHourlyWeather(previousHour) {
+    const message = formatPreviousHour(previousHour);
+    const title = "AgriWeather · 1 hour ago";
+    showWeatherToast({
+        level: "normal",
+        title,
+        message
+    });
+
+    if ("Notification" in window &&
+        Notification.permission === "granted") {
+        const hourKey = new Date().toISOString().slice(0, 13);
+        new Notification(title, {
+            body: message,
+            tag: `weather-hourly-${hourKey}`
+        });
+    }
+}
+
+function showWeatherToast(alert) {
+    const toast = $("weather-toast");
+    const level = String(alert.level || "").toLowerCase();
+    const danger = level === "danger";
+    const info = level === "normal";
+    $("weather-toast-icon").textContent =
+        danger ? "🚨" : info ? "🕐" : "⚠️";
+    $("weather-toast-title").textContent =
+        alert.title || "Weather alert";
+    $("weather-toast-message").textContent =
+        alert.message || "Review weather conditions for your farm.";
+    toast.classList.toggle("danger", danger);
+    toast.classList.toggle("info", info);
+    toast.hidden = false;
+    window.clearTimeout(weatherToastTimer);
+    weatherToastTimer = window.setTimeout(() => {
+        toast.hidden = true;
+    }, 10000);
+}
+
+$("weather-toast-close").addEventListener("click", () => {
+    $("weather-toast").hidden = true;
+    window.clearTimeout(weatherToastTimer);
+});
+
+function renderCropSuggestions(weather) {
+    const result = weather.crop_suggestions;
+    const box = $("crop-suggestions");
+    const cautions = $("crop-cautions");
+    box.replaceChildren();
+    cautions.replaceChildren();
+
+    if (!result || !Array.isArray(result.recommendations) ||
+        result.recommendations.length === 0) {
+        $("crop-advice-meta").textContent =
+            "Crop advice is unavailable. Check your saved soil type and refresh.";
+        box.innerHTML =
+            '<div class="empty">No crop suggestions are available for this profile.</div>';
+        cautions.hidden = true;
+        return;
+    }
+
+    $("crop-advice-meta").textContent =
+        `${result.soil_type} soil · Based on current temperature of ` +
+        `${weather.temperature_2m ?? "—"}°C`;
+
+    result.recommendations.forEach((recommendation, index) => {
+        const card = document.createElement("article");
+        card.className = "crop-suggestion";
+
+        const rank = document.createElement("span");
+        rank.className = "crop-rank";
+        rank.textContent = `0${index + 1}`;
+
+        const heading = document.createElement("h3");
+        heading.textContent = recommendation.crop;
+
+        const fit = document.createElement("span");
+        fit.className = "crop-fit";
+        fit.textContent = recommendation.weather_fit;
+
+        const reason = document.createElement("p");
+        reason.textContent = recommendation.reason;
+
+        card.append(rank, heading, fit, reason);
+        box.appendChild(card);
+    });
+
+    if (Array.isArray(result.weather_cautions) &&
+        result.weather_cautions.length) {
+        cautions.hidden = false;
+        result.weather_cautions.forEach(caution => {
+            const item = document.createElement("p");
+            item.textContent = `⚠️ ${caution}`;
+            cautions.appendChild(item);
+        });
+    } else {
+        cautions.hidden = true;
+    }
+
+    $("crop-advice-note").textContent = result.note ||
+        "Check the local sowing season, soil test, irrigation and local expert advice.";
 }
 
 function renderForecast(weather) {
@@ -1081,16 +1647,27 @@ function renderForecast(weather) {
         return;
     }
 
-    const count = Math.min(6, forecast.time.length);
+    const nowTime = String(weather.time || "");
+    const futureIndices = forecast.time
+        .map((time, index) => ({ time: String(time), index }))
+        .filter(item => !nowTime || item.time >= nowTime)
+        .slice(0, 6);
 
-    for (let i = 0; i < count; i++) {
+    if (futureIndices.length === 0) {
+        box.innerHTML =
+            '<div class="empty">No upcoming hourly forecast data is available.</div>';
+        return;
+    }
+
+    for (const forecastItem of futureIndices) {
+        const i = forecastItem.index;
         const item = document.createElement("div");
         item.className = "forecast-item";
 
-        const date = new Date(forecast.time[i]);
+        const date = new Date(forecastItem.time);
         const time = document.createElement("small");
         time.textContent = Number.isNaN(date.getTime())
-            ? String(forecast.time[i]).slice(-5)
+            ? forecastItem.time.slice(-5)
             : date.toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit"
@@ -1119,7 +1696,7 @@ function renderForecast(weather) {
     }
 }
 
-async function loadWeather(coords = null) {
+async function loadWeather(coords = null, hourlyUpdate = false) {
     setStatus("Fetching weather and alerts…");
 
     try {
@@ -1144,6 +1721,15 @@ async function loadWeather(coords = null) {
         $("rain").textContent = `${weather.precipitation ?? "—"} mm`;
         $("wind").textContent = `${weather.wind_speed_10m ?? "—"} km/h`;
 
+        $("overview-temp").textContent =
+            `${weather.temperature_2m ?? "—"} °C`;
+        $("overview-humidity").textContent =
+            `${weather.relative_humidity_2m ?? "—"}%`;
+        $("overview-rain").textContent =
+            `${weather.precipitation ?? "—"} mm`;
+        $("overview-wind").textContent =
+            `${weather.wind_speed_10m ?? "—"} km/h`;
+
         $("hero-temp").textContent =
             `${weather.temperature_2m ?? "—"}°C`;
 
@@ -1152,11 +1738,12 @@ async function loadWeather(coords = null) {
             ? "Precipitation reported"
             : "Current conditions";
 
-        $("updated-at").textContent =
-            "Updated " + new Date().toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit"
-            });
+        const updatedTime = new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+        $("updated-at").textContent = "Updated " + updatedTime;
+        $("overview-updated").textContent = "Updated " + updatedTime;
 
         const alerts = [
             ...(Array.isArray(weather.alerts) ? weather.alerts : []),
@@ -1164,9 +1751,13 @@ async function loadWeather(coords = null) {
                 ? weather.forecast_alerts
                 : [])
         ];
-        renderAlerts(alerts);
+        renderAlerts(alerts, weather.previous_hour);
         notifyWeatherAlerts(alerts);
+        if (hourlyUpdate) {
+            notifyHourlyWeather(weather.previous_hour);
+        }
         renderForecast(weather);
+        renderCropSuggestions(weather);
 
         setStatus(
             "Weather loaded for " +
@@ -1187,6 +1778,21 @@ async function loadWeather(coords = null) {
 
         $("alerts-list").querySelector("p").textContent = error.message;
     }
+}
+
+function scheduleHourlyWeatherUpdate() {
+    window.clearTimeout(hourlyWeatherTimer);
+    const now = new Date();
+    const nextHour = new Date(now);
+    nextHour.setHours(now.getHours() + 1, 0, 0, 0);
+
+    hourlyWeatherTimer = window.setTimeout(async () => {
+        try {
+            await loadWeather(activeCoords, true);
+        } finally {
+            scheduleHourlyWeatherUpdate();
+        }
+    }, nextHour.getTime() - now.getTime());
 }
 
 function getCurrentGPS() {
@@ -1218,9 +1824,9 @@ function updateNotificationsButton() {
         notificationsButton.textContent = "Browser notifications unavailable";
         notificationsButton.disabled = true;
     } else if (Notification.permission === "granted") {
-        notificationsButton.textContent = "Weather notifications enabled";
+        notificationsButton.textContent = "Hourly notifications enabled";
     } else if (Notification.permission === "denied") {
-        notificationsButton.textContent = "Notifications blocked in browser";
+        notificationsButton.textContent = "Hourly notifications blocked";
     }
 }
 
@@ -1269,14 +1875,58 @@ async function loadCurrentGPS() {
 
 $("detect-btn").addEventListener("click", loadCurrentGPS);
 
-document.querySelectorAll(".nav a").forEach(link => {
-    link.addEventListener("click", () => {
-        document.querySelectorAll(".nav a").forEach(item =>
-            item.classList.remove("active")
-        );
-        link.classList.add("active");
+const dashboardViews = Array.from(
+    document.querySelectorAll("[data-dashboard-view]")
+);
+const dashboardLinks = Array.from(document.querySelectorAll(".nav a"));
+const dashboardQuickLinks = Array.from(
+    document.querySelectorAll("[data-dashboard-link]")
+);
+
+function showDashboardView(viewId, updateHistory = false) {
+    const selectedView = dashboardViews.find(view => view.id === viewId)
+        || dashboardViews.find(view => view.id === "overview");
+
+    dashboardViews.forEach(view => {
+        const isSelected = view === selectedView;
+        view.hidden = !isSelected;
+        view.classList.toggle("active", isSelected);
+    });
+
+    dashboardLinks.forEach(link => {
+        const isSelected = link.hash === `#${selectedView.id}`;
+        link.classList.toggle("active", isSelected);
+        if (isSelected) {
+            link.setAttribute("aria-current", "page");
+        } else {
+            link.removeAttribute("aria-current");
+        }
+    });
+
+    if (updateHistory && window.location.hash !== `#${selectedView.id}`) {
+        window.history.pushState(null, "", `#${selectedView.id}`);
+    }
+}
+
+dashboardLinks.forEach(link => {
+    link.addEventListener("click", event => {
+        event.preventDefault();
+        showDashboardView(link.hash.slice(1), true);
     });
 });
+
+dashboardQuickLinks.forEach(link => {
+    link.addEventListener("click", event => {
+        event.preventDefault();
+        showDashboardView(link.dataset.dashboardLink, true);
+    });
+});
+
+window.addEventListener("popstate", () => {
+    showDashboardView(window.location.hash.slice(1));
+});
+
+showDashboardView(window.location.hash.slice(1));
 
 (async function initDashboard() {
     try {
@@ -1288,6 +1938,7 @@ document.querySelectorAll(".nav a").forEach(link => {
 
     await loadCurrentGPS();
     window.setInterval(() => loadWeather(activeCoords), WEATHER_REFRESH_INTERVAL);
+    scheduleHourlyWeatherUpdate();
 })();
 </script>
 </body>
